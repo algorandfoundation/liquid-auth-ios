@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import UIKit
 
 struct QRCodeScannerView: UIViewControllerRepresentable {
     class Coordinator: NSObject, AVCaptureMetadataOutputObjectsDelegate {
@@ -13,6 +14,11 @@ struct QRCodeScannerView: UIViewControllerRepresentable {
             if let metadataObject = metadataObjects.first as? AVMetadataMachineReadableCodeObject,
                metadataObject.type == .qr,
                let stringValue = metadataObject.stringValue {
+                // Trigger haptic feedback
+                let generator = UIImpactFeedbackGenerator(style: .medium)
+                generator.impactOccurred()
+
+                // Call the parent handler
                 parent.didFindCode(stringValue)
             }
         }
