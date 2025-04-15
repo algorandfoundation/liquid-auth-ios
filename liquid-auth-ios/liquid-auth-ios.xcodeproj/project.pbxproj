@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		6EE5379A2DAE75340032EC12 /* SwiftCBOR in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537992DAE75340032EC12 /* SwiftCBOR */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		6E68E69D2DA924940087CB6D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6EE5379A2DAE75340032EC12 /* SwiftCBOR in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +83,7 @@
 				6E68E68E2DA924920087CB6D /* liquid-auth-ios */,
 				6E68E69F2DA924940087CB6D /* liquid-auth-iosTests */,
 				6E68E6A92DA924940087CB6D /* liquid-auth-iosUITests */,
+				6EE537982DAE75340032EC12 /* Frameworks */,
 				6E68E68D2DA924920087CB6D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -90,6 +96,13 @@
 				6E68E6A62DA924940087CB6D /* liquid-auth-iosUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		6EE537982DAE75340032EC12 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -112,6 +125,7 @@
 			);
 			name = "liquid-auth-ios";
 			packageProductDependencies = (
+				6EE537992DAE75340032EC12 /* SwiftCBOR */,
 			);
 			productName = "liquid-auth-ios";
 			productReference = 6E68E68C2DA924920087CB6D /* liquid-auth-ios.app */;
@@ -195,6 +209,9 @@
 			);
 			mainGroup = 6E68E6832DA924920087CB6D;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				6EE537972DAE74A10032EC12 /* XCRemoteSwiftPackageReference "SwiftCBOR" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6E68E68D2DA924920087CB6D /* Products */;
 			projectDirPath = "";
@@ -556,6 +573,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6EE537972DAE74A10032EC12 /* XCRemoteSwiftPackageReference "SwiftCBOR" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/valpackett/SwiftCBOR";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6EE537992DAE75340032EC12 /* SwiftCBOR */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6EE537972DAE74A10032EC12 /* XCRemoteSwiftPackageReference "SwiftCBOR" */;
+			productName = SwiftCBOR;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 6E68E6842DA924920087CB6D /* Project object */;
 }
