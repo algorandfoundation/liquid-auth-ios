@@ -1,6 +1,15 @@
 {
-  "originHash" : "578a4d72f998b8770af25f520bbc1488e8e53274bef967576a2535a6b281c476",
+  "originHash" : "6db90b9af3dd891711dcebca623b02b2cb2dae02e1703310c1c7c6003100ea95",
   "pins" : [
+    {
+      "identity" : "starscream",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/daltoniam/Starscream",
+      "state" : {
+        "revision" : "c6bfd1af48efcc9a9ad203665db12375ba6b145a",
+        "version" : "4.0.8"
+      }
+    },
     {
       "identity" : "swiftcbor",
       "kind" : "remoteSourceControl",
@@ -8,6 +17,15 @@
       "state" : {
         "branch" : "master",
         "revision" : "ea5ece79b0efde241495bfaa74eccceeffc382bc"
+      }
+    },
+    {
+      "identity" : "webrtc",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/stasel/WebRTC",
+      "state" : {
+        "revision" : "e15b6945119ac4702b2ff6f770823341e1366ec8",
+        "version" : "135.0.0"
       }
     }
   ],
