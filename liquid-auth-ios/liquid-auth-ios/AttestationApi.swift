@@ -20,14 +20,13 @@ class AttestationApi {
         options: [String: Any],
         completion: @escaping (Result<(Data, HTTPCookie?), Error>) -> Void
     ) {
-        // TODO: We are assuming the origin is an HTTPS URL. This should be validated.
+        // TODO: We are assuming that the request is over HTTPS
         let path = "https://\(origin)/attestation/request"
         guard let url = URL(string: path) else {
             completion(.failure(NSError(domain: "Invalid URL", code: -1, userInfo: nil)))
             return
         }
 
-        // Convert options dictionary to JSON data
         guard let body = try? JSONSerialization.data(withJSONObject: options, options: []) else {
             completion(.failure(NSError(domain: "Invalid JSON", code: -1, userInfo: nil)))
             return
@@ -39,7 +38,6 @@ class AttestationApi {
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
         request.httpBody = body
 
-        // Perform the request
         let task = session.dataTask(with: request) { data, response, error in
             if let error = error {
                 completion(.failure(error))
@@ -47,14 +45,14 @@ class AttestationApi {
             }
 
             guard let httpResponse = response as? HTTPURLResponse,
-                  let data = data else {
+                let data = data else {
                 completion(.failure(NSError(domain: "Invalid response", code: -1, userInfo: nil)))
                 return
             }
 
-            // Extract cookies from the response
+            // Extract the cookie
             let cookies = HTTPCookie.cookies(withResponseHeaderFields: httpResponse.allHeaderFields as! [String: String], for: url)
-            let sessionCookie = cookies.first(where: { $0.name == "session" })
+            let sessionCookie = cookies.first(where: { $0.name == "connect.sid" })
 
             completion(.success((data, sessionCookie)))
         }
