@@ -1,48 +1,68 @@
 import SwiftUI
 import AVFoundation
-import UIKit
+import x_hd_wallet_api
+import MnemonicSwift
+
 
 struct ContentView: View {
     @State private var isScanning = false
+    @State private var isLoading = false
     @State private var scannedMessage: String? = nil
     @State private var errorMessage: String? = nil
 
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Ready to scan?")
-            
-            Button(action: {
-                isScanning = true
-            }) {
-                Text("Scan QR Code")
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-            }
-            .sheet(isPresented: $isScanning) {
-                QRCodeScannerView { scannedCode in
-                    handleScannedCode(scannedCode)
-                    isScanning = false
+        ZStack {
+            VStack {
+                Image(systemName: "globe")
+                    .imageScale(.large)
+                    .foregroundStyle(.tint)
+                Text("Ready to scan?")
+                
+                Button(action: {
+                    isScanning = true
+                }) {
+                    Text("Scan QR Code")
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                }
+                .sheet(isPresented: $isScanning) {
+                    QRCodeScannerView { scannedCode in
+                        isScanning = false // Dismiss the camera view immediately
+                        handleScannedCode(scannedCode)
+                    }
+                }
+
+                if let message = scannedMessage {
+                    Text("Message: \(message)")
+                        .padding()
+                }
+
+                if let error = errorMessage {
+                    Text("Error: \(error)")
+                        .foregroundColor(.red)
+                        .padding()
                 }
             }
+            .padding()
 
-            if let message = scannedMessage {
-                Text("Message: \(message)")
-                    .padding()
-            }
-
-            if let error = errorMessage {
-                Text("Error: \(error)")
-                    .foregroundColor(.red)
-                    .padding()
+            // Show a loading overlay when isLoading is true
+            if isLoading {
+                VStack {
+                    ProgressView("Processing...")
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(10)
+                        .shadow(radius: 10)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black.opacity(0.5))
+                .edgesIgnoringSafeArea(.all)
             }
         }
-        .padding()
     }
+
 
     private func handleScannedCode(_ code: String) {
         if code.starts(with: "FIDO:/") {
@@ -102,6 +122,7 @@ struct ContentView: View {
             */
         } else if code.starts(with: "liquid://") {
             // Handle Liquid Auth URI
+            isLoading = true
             handleLiquidAuthURI(code)
         } else {
             errorMessage = "Unsupported QR code format."
@@ -123,42 +144,68 @@ struct ContentView: View {
             // For now, only register:
 
             if (true) {
-                register(origin: origin, requestId: requestId)
+                DispatchQueue.global().async {
+                    register(origin: origin, requestId: requestId)
+                    DispatchQueue.main.async {
+                        isLoading = false // Stop loading
+                    }
+                }
             }
             // TODO: If yes, authenticate with the credential
             
         } else {
             print("Failed to extract origin and request ID.")
+            isLoading = false
         }
     }
 
     private func register(origin: String, requestId: String) {
-        // Get the appropriate Algorand wallet address
-        let address = "ABC"
+        do {
+            // Get the appropriate Algorand Address
+            let seed = try Mnemonic.deterministicSeedString(from: "salon zoo engage submit smile frost later decide wing sight chaos renew lizard rely canal coral scene hobby scare step bus leaf tobacco slice")
+            
+            let c = XHDWalletAPI(seed: seed)
+            
+            guard let pk = try c?.keyGen(context: KeyContext.Address, account: 0, change: 0, keyIndex: 0) else {
+                throw NSError(domain: "Key generation failed", code: -1, userInfo: nil)
+            }
+            
+            let address = try Utility.encodeAddress(bytes: pk)
+            
+            print("Address: \(address)")
 
-        // Construct the options JSON object
-        
-        let attestationApi = AttestationApi()
-        let options: [String: Any] = [
-            "username": address,
-            "displayName": "Liquid Auth User",
-            "authenticatorSelection": ["userVerification": "required"],
-            "extensions": ["liquid": true]
-        ]
-        let userAgent = Utility.getUserAgent()
+            let attestationApi = AttestationApi()
 
-        attestationApi.postAttestationOptions(origin: origin, userAgent: userAgent, options: options) { result in
-            switch result {
-            case .success(let (data, sessionCookie)):
-                print("Response data: \(String(data: data, encoding: .utf8) ?? "Invalid data")")
-                if let cookie = sessionCookie {
-                    print("Session cookie: \(cookie)")
+            let options: [String: Any] = [
+                "username": address,
+                "displayName": "Liquid Auth User",
+                "authenticatorSelection": ["userVerification": "required"],
+                "extensions": ["liquid": true]
+            ]
+
+            let userAgent = Utility.getUserAgent()
+
+            attestationApi.postAttestationOptions(origin: origin, userAgent: userAgent, options: options, completion: { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let (data, sessionCookie)):
+                        print("Response data: \(String(data: data, encoding: .utf8) ?? "Invalid data")")
+                        if let cookie = sessionCookie {
+                            print("Session cookie: \(cookie)")
+                        }
+                    case .failure(let error):
+                        print("Error: \(error)")
+                    }
+                    isLoading = false
                 }
-            case .failure(let error):
-                print("Error: \(error)")
+            })
+        } catch {
+            print("Error in register: \(error)")
+            DispatchQueue.main.async {
+                self.errorMessage = "Failed to register: \(error.localizedDescription)"
+                self.isLoading = false
             }
         }
-        
     }
 }
 
