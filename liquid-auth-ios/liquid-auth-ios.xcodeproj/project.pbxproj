@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		6EE5379A2DAE75340032EC12 /* SwiftCBOR in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537992DAE75340032EC12 /* SwiftCBOR */; };
+		6EE537D92DAFA7AE0032EC12 /* WebRTC in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537D82DAFA7AE0032EC12 /* WebRTC */; };
+		6EE537DE2DAFC2540032EC12 /* Starscream in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537DD2DAFC2540032EC12 /* Starscream */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +59,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				6EE5379A2DAE75340032EC12 /* SwiftCBOR in Frameworks */,
+				6EE537D92DAFA7AE0032EC12 /* WebRTC in Frameworks */,
+				6EE537DE2DAFC2540032EC12 /* Starscream in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -126,6 +130,8 @@
 			name = "liquid-auth-ios";
 			packageProductDependencies = (
 				6EE537992DAE75340032EC12 /* SwiftCBOR */,
+				6EE537D82DAFA7AE0032EC12 /* WebRTC */,
+				6EE537DD2DAFC2540032EC12 /* Starscream */,
 			);
 			productName = "liquid-auth-ios";
 			productReference = 6E68E68C2DA924920087CB6D /* liquid-auth-ios.app */;
@@ -211,6 +217,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				6EE537972DAE74A10032EC12 /* XCRemoteSwiftPackageReference "SwiftCBOR" */,
+				6EE537D72DAFA7540032EC12 /* XCRemoteSwiftPackageReference "WebRTC" */,
+				6EE537DC2DAFC2540032EC12 /* XCRemoteSwiftPackageReference "Starscream" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6E68E68D2DA924920087CB6D /* Products */;
@@ -583,6 +591,22 @@
 				kind = branch;
 			};
 		};
+		6EE537D72DAFA7540032EC12 /* XCRemoteSwiftPackageReference "WebRTC" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stasel/WebRTC";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 135.0.0;
+			};
+		};
+		6EE537DC2DAFC2540032EC12 /* XCRemoteSwiftPackageReference "Starscream" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/daltoniam/Starscream";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.0.8;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -590,6 +614,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6EE537972DAE74A10032EC12 /* XCRemoteSwiftPackageReference "SwiftCBOR" */;
 			productName = SwiftCBOR;
+		};
+		6EE537D82DAFA7AE0032EC12 /* WebRTC */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6EE537D72DAFA7540032EC12 /* XCRemoteSwiftPackageReference "WebRTC" */;
+			productName = WebRTC;
+		};
+		6EE537DD2DAFC2540032EC12 /* Starscream */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6EE537DC2DAFC2540032EC12 /* XCRemoteSwiftPackageReference "Starscream" */;
+			productName = Starscream;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
