@@ -171,8 +171,6 @@ struct ContentView: View {
             }
             
             let address = try Utility.encodeAddress(bytes: pk)
-            
-            print("Address: \(address)")
 
             let attestationApi = AttestationApi()
 
