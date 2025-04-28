@@ -195,20 +195,22 @@ struct ContentView: View {
                         if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
                         let challengeBase64 = json["challenge"] as? String {
                             print("Challenge (Base64): \(challengeBase64)")
-                            
+                            print("Challenge Decoded: \([UInt8](Utility.decodeBase64Url(challengeBase64)!))")
+                            print("Challenge JSON: \(Utility.decodeBase64UrlToJSON(challengeBase64) ?? "nil")")
                             do {
-                                let schema = try Schema(filePath: "liquid-auth-ios/liquid-auth-ios/auth.request.json")
+                                let schema = try Schema(filePath: Bundle.main.path(forResource: "auth.request", ofType: "json")!)
                                 
                                 let sig = try wallet?.signData(
                                     context: KeyContext.Address,
                                     account: 0,
                                     change: 0,
                                     keyIndex: 0,
-                                    data: Utility.decodeBase64Url(challengeBase64)!,
-                                    metadata: SignMetadata(customEncoding: Encoding.base64, customSchema: schema)
+                                    data: Data(Utility.decodeBase64UrlToJSON(challengeBase64)!.utf8),
+                                    metadata: SignMetadata(encoding: Encoding.none, schema: schema)
                                 )
                                 
                                 print("Signature: " + "\(sig?.base64EncodedString() ?? "nil")")
+                                print("Signature Length (Raw Bytes): \(sig?.count ?? -1)")
                             } catch {
                                 print("Failed to load schema: \(error)")
                             }

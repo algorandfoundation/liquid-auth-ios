@@ -68,4 +68,28 @@ struct Utility {
         // Decode the Base64 string
         return Data(base64Encoded: base64)
     }
+
+    /// Decodes a Base64Url string into a JSON representation of bytes.
+    public static func decodeBase64UrlToJSON(_ base64Url: String) -> String? {
+        // Decode the Base64Url string into Data
+        guard let decodedData = decodeBase64Url(base64Url) else {
+            return nil
+        }
+        
+        // Convert Data to [UInt8]
+        let decodedBytes = [UInt8](decodedData)
+        
+        // Create a dictionary where each byte is represented as a key-value pair
+        let byteDictionary = decodedBytes.enumerated().reduce(into: [String: UInt8]()) { dict, pair in
+            dict["\(pair.offset)"] = pair.element
+        }
+        
+        // Convert the dictionary to a JSON string
+        if let jsonData = try? JSONSerialization.data(withJSONObject: byteDictionary, options: [.prettyPrinted]),
+        let jsonString = String(data: jsonData, encoding: .utf8) {
+            return jsonString
+        }
+        
+        return nil
+    }
 }
