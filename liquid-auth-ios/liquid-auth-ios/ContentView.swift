@@ -164,9 +164,9 @@ struct ContentView: View {
             // Get the appropriate Algorand Address
             let seed = try Mnemonic.deterministicSeedString(from: "salon zoo engage submit smile frost later decide wing sight chaos renew lizard rely canal coral scene hobby scare step bus leaf tobacco slice")
             
-            let c = XHDWalletAPI(seed: seed)
+            let wallet = XHDWalletAPI(seed: seed)
             
-            guard let pk = try c?.keyGen(context: KeyContext.Address, account: 0, change: 0, keyIndex: 0) else {
+            guard let pk = try wallet?.keyGen(context: KeyContext.Address, account: 0, change: 0, keyIndex: 0) else {
                 throw NSError(domain: "Key generation failed", code: -1, userInfo: nil)
             }
             
@@ -191,6 +191,31 @@ struct ContentView: View {
                         if let cookie = sessionCookie {
                             print("Session cookie: \(cookie)")
                         }
+
+                        if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                        let challengeBase64 = json["challenge"] as? String {
+                            print("Challenge (Base64): \(challengeBase64)")
+                            
+                            do {
+                                let schema = try Schema(filePath: "liquid-auth-ios/liquid-auth-ios/auth.request.json")
+                                
+                                let sig = try wallet?.signData(
+                                    context: KeyContext.Address,
+                                    account: 0,
+                                    change: 0,
+                                    keyIndex: 0,
+                                    data: Utility.decodeBase64Url(challengeBase64)!,
+                                    metadata: SignMetadata(customEncoding: Encoding.base64, customSchema: schema)
+                                )
+                                
+                                print("Signature: " + "\(sig?.base64EncodedString() ?? "nil")")
+                            } catch {
+                                print("Failed to load schema: \(error)")
+                            }
+                        } else {
+                            print("Failed to parse response JSON or find the challenge field.")
+                        }
+                        
                     case .failure(let error):
                         print("Error: \(error)")
                     }

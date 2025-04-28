@@ -1,5 +1,5 @@
 {
-  "originHash" : "fdf556dd2d56495e17691fc342be38cb1d099d81cc740250d1fe29c79db7ed38",
+  "originHash" : "32293b5e9e7bfa58d51d0809f1ea0608b760f92156c6ffa4cfc934f0cddca079",
   "pins" : [
     {
       "identity" : "base32",
@@ -193,10 +193,10 @@
     {
       "identity" : "xhd-wallet-api-swift",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/algorandfoundation/xHD-Wallet-API-swift",
+      "location" : "https://github.com/algorandfoundation/xHD-Wallet-API-swift/",
       "state" : {
         "branch" : "main",
-        "revision" : "e5577ca2df787cef16f415c6d3c3cdee7bfc2d75"
+        "revision" : "f5f1b560401490281dd0883b9b478e5d2cde834b"
       }
     },
     {

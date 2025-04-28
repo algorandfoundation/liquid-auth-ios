@@ -12,7 +12,6 @@
 		6EE537DE2DAFC2540032EC12 /* Starscream in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537DD2DAFC2540032EC12 /* Starscream */; };
 		6EE537E62DBD5E6A0032EC12 /* deterministicP256-swift in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537E52DBD5E6A0032EC12 /* deterministicP256-swift */; };
 		6EE537E92DBD631D0032EC12 /* MnemonicSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537E82DBD631D0032EC12 /* MnemonicSwift */; };
-		6EE537EB2DBD636F0032EC12 /* x-hd-wallet-api in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537EA2DBD636F0032EC12 /* x-hd-wallet-api */; };
 		6EE537F32DBD64D80032EC12 /* Base32 in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537F22DBD64D80032EC12 /* Base32 */; };
 /* End PBXBuildFile section */
 
@@ -64,7 +63,6 @@
 			files = (
 				6EE537F32DBD64D80032EC12 /* Base32 in Frameworks */,
 				6EE5379A2DAE75340032EC12 /* SwiftCBOR in Frameworks */,
-				6EE537EB2DBD636F0032EC12 /* x-hd-wallet-api in Frameworks */,
 				6EE537D92DAFA7AE0032EC12 /* WebRTC in Frameworks */,
 				6EE537E62DBD5E6A0032EC12 /* deterministicP256-swift in Frameworks */,
 				6EE537E92DBD631D0032EC12 /* MnemonicSwift in Frameworks */,
@@ -142,7 +140,6 @@
 				6EE537DD2DAFC2540032EC12 /* Starscream */,
 				6EE537E52DBD5E6A0032EC12 /* deterministicP256-swift */,
 				6EE537E82DBD631D0032EC12 /* MnemonicSwift */,
-				6EE537EA2DBD636F0032EC12 /* x-hd-wallet-api */,
 				6EE537F22DBD64D80032EC12 /* Base32 */,
 			);
 			productName = "liquid-auth-ios";
@@ -231,10 +228,10 @@
 				6EE537972DAE74A10032EC12 /* XCRemoteSwiftPackageReference "SwiftCBOR" */,
 				6EE537D72DAFA7540032EC12 /* XCRemoteSwiftPackageReference "WebRTC" */,
 				6EE537DC2DAFC2540032EC12 /* XCRemoteSwiftPackageReference "Starscream" */,
-				6EE537E32DBD5E360032EC12 /* XCRemoteSwiftPackageReference "xHD-Wallet-API-swift" */,
 				6EE537E42DBD5E6A0032EC12 /* XCRemoteSwiftPackageReference "deterministic-P256-swift" */,
 				6EE537E72DBD631D0032EC12 /* XCRemoteSwiftPackageReference "MnemonicSwift" */,
 				6EE537F12DBD64D80032EC12 /* XCRemoteSwiftPackageReference "Base32" */,
+				6ECF13E52DBEBA73006E0BE0 /* XCRemoteSwiftPackageReference "xHD-Wallet-API-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6E68E68D2DA924920087CB6D /* Products */;
@@ -599,6 +596,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		6ECF13E52DBEBA73006E0BE0 /* XCRemoteSwiftPackageReference "xHD-Wallet-API-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/algorandfoundation/xHD-Wallet-API-swift/";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 		6EE537972DAE74A10032EC12 /* XCRemoteSwiftPackageReference "SwiftCBOR" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/valpackett/SwiftCBOR";
@@ -621,14 +626,6 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 4.0.8;
-			};
-		};
-		6EE537E32DBD5E360032EC12 /* XCRemoteSwiftPackageReference "xHD-Wallet-API-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/algorandfoundation/xHD-Wallet-API-swift";
-			requirement = {
-				branch = main;
-				kind = branch;
 			};
 		};
 		6EE537E42DBD5E6A0032EC12 /* XCRemoteSwiftPackageReference "deterministic-P256-swift" */ = {
@@ -682,11 +679,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6EE537E72DBD631D0032EC12 /* XCRemoteSwiftPackageReference "MnemonicSwift" */;
 			productName = MnemonicSwift;
-		};
-		6EE537EA2DBD636F0032EC12 /* x-hd-wallet-api */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6EE537E32DBD5E360032EC12 /* XCRemoteSwiftPackageReference "xHD-Wallet-API-swift" */;
-			productName = "x-hd-wallet-api";
 		};
 		6EE537F22DBD64D80032EC12 /* Base32 */ = {
 			isa = XCSwiftPackageProductDependency;
