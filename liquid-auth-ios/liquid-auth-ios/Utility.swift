@@ -30,6 +30,7 @@ struct Utility {
         Data(SHA512_256().hash([UInt8](data)))
     }
     
+    /// Encode an Ed25519 public key into an Algorand Base32 address with the checksum.
     public static func encodeAddress(bytes: Data) throws -> String {
         let lenBytes = 32
         let checksumLenBytes = 4
@@ -49,5 +50,22 @@ struct Utility {
          throw NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "unexpected address length \(res.count)"])
         }
         return res
+    }
+
+    /// Decodes a Base64Url string into bytes.
+    public static func decodeBase64Url(_ base64Url: String) -> Data? {
+        // Replace Base64Url characters with Base64 equivalents
+        var base64 = base64Url
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        
+        // Add padding if necessary
+        let paddingLength = 4 - (base64.count % 4)
+        if paddingLength < 4 {
+            base64.append(String(repeating: "=", count: paddingLength))
+        }
+        
+        // Decode the Base64 string
+        return Data(base64Encoded: base64)
     }
 }
