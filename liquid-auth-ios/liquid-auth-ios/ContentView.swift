@@ -200,14 +200,17 @@ struct ContentView: View {
                             do {
                                 let schema = try Schema(filePath: Bundle.main.path(forResource: "auth.request", ofType: "json")!)
                                 
-                                let sig = try wallet?.signData(
-                                    context: KeyContext.Address,
-                                    account: 0,
-                                    change: 0,
-                                    keyIndex: 0,
-                                    data: Data(Utility.decodeBase64UrlToJSON(challengeBase64)!.utf8),
-                                    metadata: SignMetadata(encoding: Encoding.none, schema: schema)
-                                )
+//                                let sig = try wallet?.signData(
+//                                    context: KeyContext.Address,
+//                                    account: 0,
+//                                    change: 0,
+//                                    keyIndex: 0,
+//                                    data: Data(Utility.decodeBase64UrlToJSON(challengeBase64)!.utf8),
+//                                    metadata: SignMetadata(encoding: Encoding.none, schema: schema)
+//                                )
+//
+                                // TODO: FIX THIS! Incredibly dangerous to expose rawSign like this without any data validation We need to address the data validation JSON issues that both xHD-Wallet-API-Swift and Kotlin suffer from
+                                let sig = try wallet?.rawSign(bip44Path: [0x8000_0000 + 0,  0x8000_0000 + 283,  0x8000_0000 + 0, 0, 0], message: Data([UInt8](Utility.decodeBase64Url(challengeBase64)!)), derivationType: BIP32DerivationType.Peikert)
                                 
                                 print("Signature: " + "\(sig?.base64EncodedString() ?? "nil")")
                                 print("Signature Length (Raw Bytes): \(sig?.count ?? -1)")
