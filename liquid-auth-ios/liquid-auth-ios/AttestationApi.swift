@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 class AttestationApi {
     private let session: URLSession
@@ -75,7 +76,8 @@ class AttestationApi {
         liquidExt: [String: Any]? = nil,
         completion: @escaping (Result<Data, Error>) -> Void
     ) {
-        let path = "\(origin)/attestation/response"
+        // TODO: We are assuming that the request is over HTTPS
+        let path = "https://\(origin)/attestation/response"
         guard let url = URL(string: path) else {
             completion(.failure(NSError(domain: "Invalid URL", code: -1, userInfo: nil)))
             return
@@ -84,8 +86,12 @@ class AttestationApi {
         // Construct the payload
         var payload = credential
         if let liquidExt = liquidExt {
-            payload["clientExtensionResults"] = ["liquid": liquidExt]
+            let clientExtensionResults: [String: Any] = ["liquid": liquidExt]
+            payload["clientExtensionResults"] = clientExtensionResults
         }
+
+        // Add device information
+        payload["device"] = UIDevice.current.model
 
         guard let body = try? JSONSerialization.data(withJSONObject: payload, options: []) else {
             completion(.failure(NSError(domain: "Invalid JSON", code: -1, userInfo: nil)))
