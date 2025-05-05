@@ -206,10 +206,10 @@ struct ContentView: View {
                         }
 
                         if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                        let challengeBase64 = json["challenge"] as? String {
-                            print("Challenge (Base64): \(challengeBase64)")
-                            print("Challenge Decoded: \([UInt8](Utility.decodeBase64Url(challengeBase64)!))")
-                            print("Challenge JSON: \(Utility.decodeBase64UrlToJSON(challengeBase64) ?? "nil")")
+                        let challengeBase64Url = json["challenge"] as? String {
+                            print("Challenge (Base64): \(challengeBase64Url)")
+                            print("Challenge Decoded: \([UInt8](Utility.decodeBase64Url(challengeBase64Url)!))")
+                            print("Challenge JSON: \(Utility.decodeBase64UrlToJSON(challengeBase64Url) ?? "nil")")
                             do {
                                 let schema = try Schema(filePath: Bundle.main.path(forResource: "auth.request", ofType: "json")!)
                                 
@@ -225,7 +225,7 @@ struct ContentView: View {
 //                                )
 
                                 // For now we validateData and call rawSign separately.
-                                let valid = try Ed25519Wallet?.validateData(data: Data(Utility.decodeBase64UrlToJSON(challengeBase64)!.utf8), metadata: SignMetadata(encoding: Encoding.none, schema: schema))
+                                let valid = try Ed25519Wallet?.validateData(data: Data(Utility.decodeBase64UrlToJSON(challengeBase64Url)!.utf8), metadata: SignMetadata(encoding: Encoding.none, schema: schema))
 
                                 if !(valid ?? false) {
                                     throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Data is not valid"])
@@ -234,10 +234,10 @@ struct ContentView: View {
                                 // Dangerous to expose rawSign like this
                                 if let sig = try Ed25519Wallet?.rawSign(
                                     bip44Path: [0x8000_0000 + 0, 0x8000_0000 + 283, 0x8000_0000 + 0, 0, 0],
-                                    message: Data([UInt8](Utility.decodeBase64Url(challengeBase64)!)),
+                                    message: Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!)),
                                     derivationType: BIP32DerivationType.Peikert
                                 ) {
-                                    print("Signature: \(sig.base64EncodedString())")
+                                    print("Signature: \(sig.base64URLEncodedString())")
                                     print("Signature Length (Raw Bytes): \(sig.count)")
 
                                     // <-- LIQUID EXTENSION: -->
@@ -247,7 +247,7 @@ struct ContentView: View {
                                         "type": "algorand",
                                         "requestId": requestId,
                                         "address": address,
-                                        "signature": sig.base64EncodedString(),
+                                        "signature": sig.base64URLEncodedString(),
                                     ]
                                     print("Created liquidExt JSON object: \(liquidExt)")
                                     
@@ -259,8 +259,8 @@ struct ContentView: View {
                                     
                                     // <-- clientDataJSON: -->
                                     let clientData: [String: Any] = [
-                                        "type": "webauthn.get",
-                                        "challenge": challengeBase64,
+                                        "type": "webauthn.create",
+                                        "challenge": challengeBase64Url,
                                         "origin": "https://\(origin)"
                                     ]
 
@@ -269,9 +269,9 @@ struct ContentView: View {
                                         throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create clientDataJSON"])
                                     }
 
-                                    let clientDataJSONBase64 = clientDataJSONData.base64EncodedString()
+                                    let clientDataJSONBase64Url = clientDataJSONData.base64URLEncodedString()
                                     
-                                    print("Created clientDataJSON: \(clientDataJSONBase64)")
+                                    print("Created clientDataJSON: \(clientDataJSONBase64Url)")
                                     
                                     // <-- attestationObject: -->
 
@@ -312,14 +312,16 @@ struct ContentView: View {
                                     let attestationObject = Data(cborEncoded)
                                     
                                     print("Created attestationobject: \(attestationObject)")
+                                    
+                                    print("Attestationobject in Base64Url: \(attestationObject.base64URLEncodedString())")
 
                                     let credential: [String: Any] = [
-                                        "id": rawId.base64EncodedString(),
+                                        "id": rawId.base64URLEncodedString(),
                                         "type": "public-key",
-                                        "rawId": rawId.base64EncodedString(),
+                                        "rawId": rawId.base64URLEncodedString(),
                                         "response": [
-                                            "clientDataJSON": clientDataJSONBase64,
-                                            "attestationObject": attestationObject.base64EncodedString()
+                                            "clientDataJSON": clientDataJSONBase64Url,
+                                            "attestationObject": attestationObject.base64URLEncodedString()
                                         ]
                                     ]
                                     
@@ -365,6 +367,17 @@ struct ContentView: View {
                 self.isLoading = false
             }
         }
+    }
+}
+
+extension Data {
+    /// Converts the Data object to a Base64URL-encoded string.
+    func base64URLEncodedString() -> String {
+        let base64 = self.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "") // Remove padding
+        return base64
     }
 }
 
