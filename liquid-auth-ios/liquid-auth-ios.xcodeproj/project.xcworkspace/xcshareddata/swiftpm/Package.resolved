@@ -1,5 +1,5 @@
 {
-  "originHash" : "32293b5e9e7bfa58d51d0809f1ea0608b760f92156c6ffa4cfc934f0cddca079",
+  "originHash" : "41ff925538ccfabd478b7f919ecf99bc5e5ff80af51a1c5b940ab68ec800b363",
   "pins" : [
     {
       "identity" : "base32",
@@ -40,10 +40,10 @@
     {
       "identity" : "deterministic-p256-swift",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/algorandfoundation/deterministic-P256-swift",
+      "location" : "https://github.com/algorandfoundation/deterministic-P256-swift/",
       "state" : {
         "branch" : "main",
-        "revision" : "d8ac95b2bcc3830556027a1d90a103d713681883"
+        "revision" : "4fe03ee04894cb3dcf706b9e70a39588c1cec1c9"
       }
     },
     {
@@ -195,8 +195,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/algorandfoundation/xHD-Wallet-API-swift/",
       "state" : {
-        "branch" : "main",
-        "revision" : "f5f1b560401490281dd0883b9b478e5d2cde834b"
+        "branch" : "temp-branch-rawsign",
+        "revision" : "e0b1553c43957de7fa0b3161a3d19ac1655cadca"
       }
     },
     {

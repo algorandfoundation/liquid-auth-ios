@@ -1,4 +1,6 @@
 import Foundation
+import CryptoKit
+import SwiftCBOR
 import UIKit
 import Base32
 
@@ -91,5 +93,82 @@ struct Utility {
         }
         
         return nil
+    }
+
+    static func encodePKToEC2COSEKey(_ publicKey: Data) -> [UInt8] {
+        var adjustedPublicKey = publicKey
+
+        // Check if the public key is 64 bytes long
+        if publicKey.count == 64 {
+            // Prepend the 0x04 byte to indicate an uncompressed public key
+            adjustedPublicKey = Data([0x04]) + publicKey
+        }
+
+        // Ensure the public key is in uncompressed format and 65 bytes long
+        guard adjustedPublicKey.count == 65, adjustedPublicKey[0] == 4 else {
+            fatalError("Public key must be in uncompressed format and 65 bytes long.")
+        }
+
+        // Extract x and y coordinates
+        let x = adjustedPublicKey[1..<33]
+        let y = adjustedPublicKey[33..<65]
+
+        // Construct the EC2 COSE Key map
+        let ec2COSEKey: [Int: Any] = [
+            1: 2,  // kty: EC2 key type
+            3: -7, // alg: ES256 signature algorithm
+            -1: 1, // crv: P-256 curve
+            -2: x, // x-coordinate
+            -3: y  // y-coordinate
+        ]
+
+        // Encode the map into CBOR format
+        do {
+            let cbor = try CBOR.encodeMap(ec2COSEKey)
+            return [UInt8](cbor)
+        } catch {
+            fatalError("Failed to encode EC2 COSE Key to CBOR: \(error)")
+        }
+    }
+
+
+    static func getAttestedCredentialData(aaguid: UUID, credentialId: Data, publicKey: Data) -> Data {
+        // Encode the public key into CBOR format
+        let cborPublicKey = encodePKToEC2COSEKey(publicKey)
+
+        let credentialIdLengthData = UInt16(credentialId.count).toDataBigEndian()
+        return aaguid.toData() + credentialIdLengthData + credentialId + publicKey
+    }
+
+    static func hashSHA256(_ input: Data) -> Data {
+        return Data(SHA256.hash(data: input))
+    }
+
+}
+
+extension UInt8 {
+    func toData() -> Data {
+        return Data([self])
+    }
+}
+
+extension UInt16 {
+    func toDataBigEndian() -> Data {
+        var value = self.bigEndian
+        return Data(bytes: &value, count: MemoryLayout.size(ofValue: value))
+    }
+}
+
+extension UInt32 {
+    func toDataBigEndian() -> Data {
+        var value = self.bigEndian
+        return Data(bytes: &value, count: MemoryLayout.size(ofValue: value))
+    }
+}
+
+extension UUID {
+    func toData() -> Data {
+        var uuid = self.uuid
+        return Data(bytes: &uuid, count: MemoryLayout.size(ofValue: uuid))
     }
 }
