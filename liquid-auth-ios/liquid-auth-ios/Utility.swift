@@ -137,7 +137,7 @@ struct Utility {
         let cborPublicKey = encodePKToEC2COSEKey(publicKey)
 
         let credentialIdLengthData = UInt16(credentialId.count).toDataBigEndian()
-        return aaguid.toData() + credentialIdLengthData + credentialId + publicKey
+        return aaguid.toData() + credentialIdLengthData + credentialId + cborPublicKey
     }
 
     static func hashSHA256(_ input: Data) -> Data {

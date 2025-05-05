@@ -92,6 +92,8 @@ class AttestationApi {
 
         // Add device information
         payload["device"] = UIDevice.current.model
+        
+        print("the full payload: \(payload)")
 
         guard let body = try? JSONSerialization.data(withJSONObject: payload, options: []) else {
             completion(.failure(NSError(domain: "Invalid JSON", code: -1, userInfo: nil)))
