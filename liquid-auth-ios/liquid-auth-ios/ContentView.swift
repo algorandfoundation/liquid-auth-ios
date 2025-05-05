@@ -248,6 +248,7 @@ struct ContentView: View {
                                         "requestId": requestId,
                                         "address": address,
                                         "signature": sig.base64URLEncodedString(),
+                                        "device": UIDevice.current.model,
                                     ]
                                     print("Created liquidExt JSON object: \(liquidExt)")
                                     
