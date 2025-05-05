@@ -233,7 +233,7 @@ struct ContentView: View {
 
                                 // Dangerous to expose rawSign like this
                                 if let sig = try Ed25519Wallet?.rawSign(
-                                    bip44Path: [0x8000_0000 + 0, 0x8000_0000 + 283, 0x8000_0000 + 0, 0, 0],
+                                    bip44Path: [0x8000_0000 + 44, 0x8000_0000 + 283, 0x8000_0000 + 0, 0, 0],
                                     message: Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!)),
                                     derivationType: BIP32DerivationType.Peikert
                                 ) {
