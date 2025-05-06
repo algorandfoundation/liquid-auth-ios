@@ -338,11 +338,16 @@ struct ContentView: View {
                                         DispatchQueue.main.async {
                                             switch result {
                                             case .success(let data):
-                                                print("Attestation result posted: \(String(data: data, encoding: .utf8) ?? "Invalid response")")
+                                                let responseString = String(data: data, encoding: .utf8) ?? "Invalid response"
+                                                print("Attestation result posted: \(responseString)")
+                                                self.scannedMessage = "Attestation result successfully posted: \(responseString)"
+                                                self.errorMessage = nil
                                             case .failure(let error):
                                                 print("Failed to post attestation result: \(error)")
                                                 self.errorMessage = "Failed to post attestation result: \(error.localizedDescription)"
+                                                self.scannedMessage = nil
                                             }
+                                            self.isLoading = false
                                         }
                                     }
                                 } else {
