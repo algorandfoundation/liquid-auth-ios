@@ -158,12 +158,7 @@ struct ContentView: View {
                 isLoading = false
             }
 
-            do {
-                await register(origin: origin, requestId: requestId)
-            } catch {
-                print("Error during registration: \(error)")
-                errorMessage = "Failed to handle Liquid Auth URI: \(error.localizedDescription)"
-            }
+            await register(origin: origin, requestId: requestId)
         }
     }
 
@@ -306,7 +301,7 @@ struct ContentView: View {
             errorMessage = nil
         } catch {
             print("Error in register: \(error)")
-            errorMessage = "Failed to register: \(error.localizedDescription)"
+            errorMessage = "Failed to handle Liquid Auth URI Registration flow: \(error.localizedDescription)"
         }
     }
 }
