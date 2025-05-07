@@ -8,10 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		6E0A054F2DC77745004A74E2 /* deterministicP256-swift in Frameworks */ = {isa = PBXBuildFile; productRef = 6E0A054E2DC77745004A74E2 /* deterministicP256-swift */; };
+		6E0A05A02DCA3132004A74E2 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = 6E0A059F2DCA3132004A74E2 /* SocketIO */; };
 		6E97FCC52DC0CD35006224B5 /* x-hd-wallet-api in Frameworks */ = {isa = PBXBuildFile; productRef = 6E97FCC42DC0CD35006224B5 /* x-hd-wallet-api */; };
 		6EE5379A2DAE75340032EC12 /* SwiftCBOR in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537992DAE75340032EC12 /* SwiftCBOR */; };
 		6EE537D92DAFA7AE0032EC12 /* WebRTC in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537D82DAFA7AE0032EC12 /* WebRTC */; };
-		6EE537DE2DAFC2540032EC12 /* Starscream in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537DD2DAFC2540032EC12 /* Starscream */; };
 		6EE537E92DBD631D0032EC12 /* MnemonicSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537E82DBD631D0032EC12 /* MnemonicSwift */; };
 		6EE537F32DBD64D80032EC12 /* Base32 in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537F22DBD64D80032EC12 /* Base32 */; };
 /* End PBXBuildFile section */
@@ -64,11 +64,11 @@
 			files = (
 				6EE537F32DBD64D80032EC12 /* Base32 in Frameworks */,
 				6E97FCC52DC0CD35006224B5 /* x-hd-wallet-api in Frameworks */,
+				6E0A05A02DCA3132004A74E2 /* SocketIO in Frameworks */,
 				6EE5379A2DAE75340032EC12 /* SwiftCBOR in Frameworks */,
 				6E0A054F2DC77745004A74E2 /* deterministicP256-swift in Frameworks */,
 				6EE537D92DAFA7AE0032EC12 /* WebRTC in Frameworks */,
 				6EE537E92DBD631D0032EC12 /* MnemonicSwift in Frameworks */,
-				6EE537DE2DAFC2540032EC12 /* Starscream in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -139,11 +139,11 @@
 			packageProductDependencies = (
 				6EE537992DAE75340032EC12 /* SwiftCBOR */,
 				6EE537D82DAFA7AE0032EC12 /* WebRTC */,
-				6EE537DD2DAFC2540032EC12 /* Starscream */,
 				6EE537E82DBD631D0032EC12 /* MnemonicSwift */,
 				6EE537F22DBD64D80032EC12 /* Base32 */,
 				6E97FCC42DC0CD35006224B5 /* x-hd-wallet-api */,
 				6E0A054E2DC77745004A74E2 /* deterministicP256-swift */,
+				6E0A059F2DCA3132004A74E2 /* SocketIO */,
 			);
 			productName = "liquid-auth-ios";
 			productReference = 6E68E68C2DA924920087CB6D /* liquid-auth-ios.app */;
@@ -230,11 +230,11 @@
 			packageReferences = (
 				6EE537972DAE74A10032EC12 /* XCRemoteSwiftPackageReference "SwiftCBOR" */,
 				6EE537D72DAFA7540032EC12 /* XCRemoteSwiftPackageReference "WebRTC" */,
-				6EE537DC2DAFC2540032EC12 /* XCRemoteSwiftPackageReference "Starscream" */,
 				6EE537E72DBD631D0032EC12 /* XCRemoteSwiftPackageReference "MnemonicSwift" */,
 				6EE537F12DBD64D80032EC12 /* XCRemoteSwiftPackageReference "Base32" */,
 				6ECF13E52DBEBA73006E0BE0 /* XCRemoteSwiftPackageReference "xHD-Wallet-API-swift" */,
 				6E0A054D2DC77745004A74E2 /* XCRemoteSwiftPackageReference "deterministic-P256-swift" */,
+				6E0A059E2DCA3132004A74E2 /* XCRemoteSwiftPackageReference "socket" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6E68E68D2DA924920087CB6D /* Products */;
@@ -607,6 +607,14 @@
 				kind = branch;
 			};
 		};
+		6E0A059E2DCA3132004A74E2 /* XCRemoteSwiftPackageReference "socket" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/socketio/socket.io-client-swift";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
 		6ECF13E52DBEBA73006E0BE0 /* XCRemoteSwiftPackageReference "xHD-Wallet-API-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/algorandfoundation/xHD-Wallet-API-swift/";
@@ -629,14 +637,6 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 135.0.0;
-			};
-		};
-		6EE537DC2DAFC2540032EC12 /* XCRemoteSwiftPackageReference "Starscream" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/daltoniam/Starscream";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 4.0.8;
 			};
 		};
 		6EE537E72DBD631D0032EC12 /* XCRemoteSwiftPackageReference "MnemonicSwift" */ = {
@@ -663,6 +663,11 @@
 			package = 6E0A054D2DC77745004A74E2 /* XCRemoteSwiftPackageReference "deterministic-P256-swift" */;
 			productName = "deterministicP256-swift";
 		};
+		6E0A059F2DCA3132004A74E2 /* SocketIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6E0A059E2DCA3132004A74E2 /* XCRemoteSwiftPackageReference "socket" */;
+			productName = SocketIO;
+		};
 		6E97FCC42DC0CD35006224B5 /* x-hd-wallet-api */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 6ECF13E52DBEBA73006E0BE0 /* XCRemoteSwiftPackageReference "xHD-Wallet-API-swift" */;
@@ -677,11 +682,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6EE537D72DAFA7540032EC12 /* XCRemoteSwiftPackageReference "WebRTC" */;
 			productName = WebRTC;
-		};
-		6EE537DD2DAFC2540032EC12 /* Starscream */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6EE537DC2DAFC2540032EC12 /* XCRemoteSwiftPackageReference "Starscream" */;
-			productName = Starscream;
 		};
 		6EE537E82DBD631D0032EC12 /* MnemonicSwift */ = {
 			isa = XCSwiftPackageProductDependency;

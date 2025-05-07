@@ -14,51 +14,44 @@ class AttestationApi {
      * @param origin - Base URL for the service
      * @param userAgent - User Agent for FIDO Server parsing
      * @param options - PublicKeyCredentialCreationOptions in JSON
+     * @return A tuple containing the response data and an optional session cookie
      */
     func postAttestationOptions(
         origin: String,
         userAgent: String,
-        options: [String: Any],
-        completion: @escaping (Result<(Data, HTTPCookie?), Error>) -> Void
-    ) {
-        // TODO: We are assuming that the request is over HTTPS
+        options: [String: Any]
+    ) async throws -> (Data, HTTPCookie?) {
+        // Construct the URL
         let path = "https://\(origin)/attestation/request"
         guard let url = URL(string: path) else {
-            completion(.failure(NSError(domain: "Invalid URL", code: -1, userInfo: nil)))
-            return
+            throw NSError(domain: "Invalid URL", code: -1, userInfo: nil)
         }
 
+        // Serialize the options into JSON
         guard let body = try? JSONSerialization.data(withJSONObject: options, options: []) else {
-            completion(.failure(NSError(domain: "Invalid JSON", code: -1, userInfo: nil)))
-            return
+            throw NSError(domain: "Invalid JSON", code: -1, userInfo: nil)
         }
 
+        // Create the request
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
         request.httpBody = body
 
-        let task = session.dataTask(with: request) { data, response, error in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
+        // Perform the request
+        let (data, response) = try await session.data(for: request)
 
-            guard let httpResponse = response as? HTTPURLResponse,
-                let data = data else {
-                completion(.failure(NSError(domain: "Invalid response", code: -1, userInfo: nil)))
-                return
-            }
-
-            // Extract the cookie
-            let cookies = HTTPCookie.cookies(withResponseHeaderFields: httpResponse.allHeaderFields as! [String: String], for: url)
-            let sessionCookie = cookies.first(where: { $0.name == "connect.sid" })
-
-            completion(.success((data, sessionCookie)))
+        // Ensure the response is an HTTPURLResponse
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "Invalid response", code: -1, userInfo: nil)
         }
 
-        task.resume()
+        // Extract the session cookie
+        let cookies = HTTPCookie.cookies(withResponseHeaderFields: httpResponse.allHeaderFields as! [String: String], for: url)
+        let sessionCookie = cookies.first(where: { $0.name == "connect.sid" })
+
+        return (data, sessionCookie)
     }
 
     /**
@@ -68,19 +61,18 @@ class AttestationApi {
      * @param userAgent - User Agent for FIDO Server parsing
      * @param credential - PublicKeyCredential from Authenticator Response
      * @param liquidExt - Optional Liquid extension data
+     * @return The response data
      */
     func postAttestationResult(
         origin: String,
         userAgent: String,
         credential: [String: Any],
-        liquidExt: [String: Any]? = nil,
-        completion: @escaping (Result<Data, Error>) -> Void
-    ) {
-        // TODO: We are assuming that the request is over HTTPS
+        liquidExt: [String: Any]? = nil
+    ) async throws -> Data {
+        // Construct the URL
         let path = "https://\(origin)/attestation/response"
         guard let url = URL(string: path) else {
-            completion(.failure(NSError(domain: "Invalid URL", code: -1, userInfo: nil)))
-            return
+            throw NSError(domain: "Invalid URL", code: -1, userInfo: nil)
         }
 
         // Construct the payload
@@ -92,14 +84,15 @@ class AttestationApi {
 
         // Add device information
         payload["device"] = UIDevice.current.model
-        
-        print("the full payload: \(payload)")
 
+        print("The full payload: \(payload)")
+
+        // Serialize the payload into JSON
         guard let body = try? JSONSerialization.data(withJSONObject: payload, options: []) else {
-            completion(.failure(NSError(domain: "Invalid JSON", code: -1, userInfo: nil)))
-            return
+            throw NSError(domain: "Invalid JSON", code: -1, userInfo: nil)
         }
 
+        // Create the request
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -107,20 +100,8 @@ class AttestationApi {
         request.httpBody = body
 
         // Perform the request
-        let task = session.dataTask(with: request) { data, response, error in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
+        let (data, _) = try await session.data(for: request)
 
-            guard let data = data else {
-                completion(.failure(NSError(domain: "Invalid response", code: -1, userInfo: nil)))
-                return
-            }
-
-            completion(.success(data))
-        }
-
-        task.resume()
+        return data
     }
 }
