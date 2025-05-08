@@ -13,6 +13,10 @@ struct ContentView: View {
     @State private var scannedMessage: String? = nil
     @State private var errorMessage: String? = nil
 
+    @State private var showActionSheet = false
+    @State private var actionSheetOrigin: String?
+    @State private var actionSheetRequestId: String?
+
     var body: some View {
         ZStack {
             VStack {
@@ -64,6 +68,37 @@ struct ContentView: View {
                 .edgesIgnoringSafeArea(.all)
             }
         }
+        .actionSheet(isPresented: $showActionSheet) {
+            actionSheet
+        }
+    }
+
+    private var actionSheet: ActionSheet {
+        ActionSheet(
+            title: Text("Choose Action"),
+            message: Text("Would you like to register or authenticate?"),
+            buttons: [
+                .default(Text("Register")) {
+                    Task {
+                        isLoading = true
+                        defer { isLoading = false }
+                        if let origin = actionSheetOrigin, let requestId = actionSheetRequestId {
+                            await register(origin: origin, requestId: requestId)
+                        }
+                    }
+                },
+                .default(Text("Authenticate")) {
+                    Task {
+                        isLoading = true
+                        defer { isLoading = false }
+                        if let origin = actionSheetOrigin, let requestId = actionSheetRequestId {
+                            await authenticate(origin: origin, requestId: requestId)
+                        }
+                    }
+                },
+                .cancel()
+            ]
+        )
     }
 
 
@@ -152,13 +187,58 @@ struct ContentView: View {
 
             // Check if a credential for the specific origin already exists (future implementation)
             // For now, proceed with registration
-            isLoading = true
+            // isLoading = true
 
-            defer {
-                isLoading = false
+            // defer {
+            //     isLoading = false
+            // }
+
+
+            // Prompt the user to choose between registration and authentication
+            DispatchQueue.main.async {
+                actionSheetOrigin = origin
+                actionSheetRequestId = requestId
+                showActionSheet = true
+                }
+            }
+        }
+
+    private func authenticate(origin: String, requestId: String) async {
+        do {
+            let userAgent = Utility.getUserAgent()
+            
+            let assertionApi = AssertionApi()
+
+            let phrase = "salon zoo engage submit smile frost later decide wing sight chaos renew lizard rely canal coral scene hobby scare step bus leaf tobacco slice"
+            let DP256 = DeterministicP256()
+            let derivedMainKey = try DP256.genDerivedMainKeyWithBIP39(phrase: phrase)
+            let P256KeyPair = DP256.genDomainSpecificKeyPair(derivedMainKey: derivedMainKey, origin: "https://\(origin)", userHandle: "tester")
+            let credentialId = Data([UInt8](Utility.hashSHA256(P256KeyPair.publicKey.rawRepresentation))).base64URLEncodedString()
+
+
+            // Call postAssertionOptions
+            let (data, sessionCookie) = try await assertionApi.postAssertionOptions(
+                origin: origin,
+                userAgent: userAgent,
+                credentialId: credentialId
+            )
+
+            // Handle the response
+            if let sessionCookie = sessionCookie {
+                print("Session cookie: \(sessionCookie)")
+                // Store or use the session cookie as needed
             }
 
-            await register(origin: origin, requestId: requestId)
+            // Parse the response data
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("Response: \(responseString)")
+            }
+
+            scannedMessage = "Authentication options retrieved successfully."
+            errorMessage = nil
+        } catch {
+            print("Error in authenticate: \(error)")
+            errorMessage = "Failed to retrieve authentication options: \(error.localizedDescription)"
         }
     }
 
