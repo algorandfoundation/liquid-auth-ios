@@ -83,7 +83,7 @@ class AttestationApi {
         }
 
         // Add device information
-        payload["device"] = UIDevice.current.model
+        payload["device"] = await UIDevice.current.model
 
         print("The full payload: \(payload)")
 
