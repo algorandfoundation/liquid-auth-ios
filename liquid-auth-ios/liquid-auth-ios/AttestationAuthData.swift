@@ -1,16 +1,6 @@
 import Foundation
 
-
-// struct AuthenticatorData {
-    
-//     init() {}
-    
-//     func toData() -> Data {
-//         return Data()
-//     }
-// }
-
-struct AuthenticatorData: Codable {
+struct AttestationAuthData: Codable {
    let rpIdHash: Data
    let userPresent: Bool
    let userVerified: Bool
@@ -40,10 +30,10 @@ struct AuthenticatorData: Codable {
 
    func createFlags(up userPresent: Bool, uv userVerified: Bool, at atIncluded: Bool, ed edIncluded: Bool) -> UInt8 {
        var flags: UInt8 = 0
-       if userPresent { flags = flags | AuthenticatorData.upMask }
-       if userVerified { flags = flags | AuthenticatorData.uvMask }
-       if atIncluded { flags = flags | AuthenticatorData.atMask }
-       if edIncluded { flags = flags | AuthenticatorData.edMask }
+       if userPresent { flags = flags | AttestationAuthData.upMask }
+       if userVerified { flags = flags | AttestationAuthData.uvMask }
+       if atIncluded { flags = flags | AttestationAuthData.atMask }
+       if edIncluded { flags = flags | AttestationAuthData.edMask }
        return flags
    }
 
