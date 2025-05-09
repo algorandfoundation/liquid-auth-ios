@@ -128,7 +128,7 @@ struct ContentView: View {
                         errorMessage = "Failed to open URI: \(code)"
                         scannedMessage = nil
                     }
-                } 
+                }
             */
 
 
@@ -208,11 +208,20 @@ struct ContentView: View {
             let userAgent = Utility.getUserAgent()
             
             let assertionApi = AssertionApi()
-
+            // Get the appropriate Algorand Address
             let phrase = "salon zoo engage submit smile frost later decide wing sight chaos renew lizard rely canal coral scene hobby scare step bus leaf tobacco slice"
+            let seed = try Mnemonic.deterministicSeedString(from: phrase)
+            let Ed25519Wallet = XHDWalletAPI(seed: seed)
             let DP256 = DeterministicP256()
             let derivedMainKey = try DP256.genDerivedMainKeyWithBIP39(phrase: phrase)
             let P256KeyPair = DP256.genDomainSpecificKeyPair(derivedMainKey: derivedMainKey, origin: "https://\(origin)", userHandle: "tester")
+
+            guard let pk = try Ed25519Wallet?.keyGen(context: KeyContext.Address, account: 0, change: 0, keyIndex: 0) else {
+                throw NSError(domain: "Key generation failed", code: -1, userInfo: nil)
+            }
+
+            let address = try Utility.encodeAddress(bytes: pk)
+
             let credentialId = Data([UInt8](Utility.hashSHA256(P256KeyPair.publicKey.rawRepresentation))).base64URLEncodedString()
 
 
@@ -229,13 +238,118 @@ struct ContentView: View {
                 // Store or use the session cookie as needed
             }
 
-            // Parse the response data
-            if let responseString = String(data: data, encoding: .utf8) {
-                print("Response: \(responseString)")
+                // Parse the response data
+            guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                  let challengeBase64Url = json["challenge"] as? String,
+                  let allowCredentials = json["allowCredentials"] as? [[String: Any]],
+                  let rpId = json["rpId"] as? String else {
+                throw NSError(domain: "Missing required fields in response", code: -1, userInfo: nil)
+            }
+            
+            print("Response: \(String(data: data, encoding: .utf8))")
+
+            print("Challenge (Base64): \(challengeBase64Url)")
+            print("Challenge Decoded: \([UInt8](Utility.decodeBase64Url(challengeBase64Url)!))")
+            print("Challenge JSON: \(Utility.decodeBase64UrlToJSON(challengeBase64Url) ?? "nil")")
+
+            // Validate and sign the challenge
+            let schema = try Schema(filePath: Bundle.main.path(forResource: "auth.request", ofType: "json")!)
+            let valid = try Ed25519Wallet?.validateData(data: Data(Utility.decodeBase64UrlToJSON(challengeBase64Url)!.utf8), metadata: SignMetadata(encoding: Encoding.none, schema: schema))
+
+            guard valid == true else {
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Data is not valid"])
             }
 
-            scannedMessage = "Authentication options retrieved successfully."
+            guard let sig = try Ed25519Wallet?.rawSign(
+                bip44Path: [UInt32(0x8000_0000) + 44, UInt32(0x8000_0000) + 283, UInt32(0x8000_0000) + 0, 0, 0],
+                message: Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!)),
+                derivationType: BIP32DerivationType.Peikert
+            ) else {
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create signature"])
+            }
+
+            print("Signature: \(sig.base64URLEncodedString())")
+            print("Signature Length (Raw Bytes): \(sig.count)")
+            
+            // Create the Liquid extension JSON object
+            let liquidExt = createLiquidExt(
+                requestId: requestId,
+                address: address,
+                signature: sig.base64URLEncodedString()
+            )
+            print("Created liquidExt JSON object: \(liquidExt)")
+
+            // Create clientDataJSON
+            let clientData: [String: Any] = [
+                "type": "webauthn.get",
+                "challenge": challengeBase64Url,
+                "origin": "https://\(origin)"
+            ]
+
+            guard let clientDataJSONData = try? JSONSerialization.data(withJSONObject: clientData, options: []),
+                let clientDataJSON = String(data: clientDataJSONData, encoding: .utf8) else {
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create clientDataJSON"])
+            }
+
+            let clientDataJSONBase64Url = clientDataJSONData.base64URLEncodedString()
+            print("Created clientDataJSON: \(clientDataJSONBase64Url)")
+
+            let rpIdHash = Utility.hashSHA256(origin.data(using: .utf8)!)
+            let authenticatorData = AuthenticatorData(
+                rpIdHash,
+                true,  // User present
+                true,  // User verified
+                0,     // Counter
+                nil,   // Attested credential data
+                nil    // Extensions
+            ).toData()
+
+            guard let clientDataJSONData = try? JSONSerialization.data(withJSONObject: clientData, options: []),
+                let clientDataJSON = String(data: clientDataJSONData, encoding: .utf8) else {
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create clientDataJSON"])
+            }
+
+            let clientDataHash = Utility.hashSHA256(clientDataJSONData)
+            let dataToSign = authenticatorData + clientDataHash
+
+            let signature = try DP256.signWithDomainSpecificKeyPair(keyPair: P256KeyPair, payload: dataToSign)
+
+            let assertionResponse: [String: Any] = [
+                "id": credentialId,
+                "type": "public-key",
+                "userHandle": "tester",
+                "rawId": credentialId,
+                "response": [
+                    "clientDataJSON": clientDataJSONData.base64URLEncodedString(),
+                    "authenticatorData": authenticatorData.base64URLEncodedString(),
+                    "signature": signature.rawRepresentation.base64URLEncodedString()
+                ]
+            ]
+
+            print("Created assertion response: \(assertionResponse)")
+
+            // Serialize the assertion response into a JSON string
+            guard let assertionResponseData = try? JSONSerialization.data(withJSONObject: assertionResponse, options: []),
+                let assertionResponseJSON = String(data: assertionResponseData, encoding: .utf8) else {
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to serialize assertion response"])
+            }                
+
+            // Post the assertion result
+            let responseData = try await assertionApi.postAssertionResult(
+                origin: origin,
+                userAgent: userAgent,
+                credential: assertionResponseJSON,
+                liquidExt: liquidExt
+            )
+
+            // Handle the server response
+            let responseString = String(data: responseData, encoding: .utf8) ?? "Invalid response"
+            print("Assertion result posted: \(responseString)")
+
+            scannedMessage = "Authentication completed successfully."
             errorMessage = nil
+
+        // Next step
         } catch {
             print("Error in authenticate: \(error)")
             errorMessage = "Failed to retrieve authentication options: \(error.localizedDescription)"
@@ -304,13 +418,11 @@ struct ContentView: View {
             print("Signature Length (Raw Bytes): \(sig.count)")
 
             // Create the Liquid extension JSON object
-            let liquidExt: [String: Any] = [
-                "type": "algorand",
-                "requestId": requestId,
-                "address": address,
-                "signature": sig.base64URLEncodedString(),
-                "device": UIDevice.current.model,
-            ]
+            let liquidExt = createLiquidExt(
+                requestId: requestId,
+                address: address,
+                signature: sig.base64URLEncodedString()
+            )
             print("Created liquidExt JSON object: \(liquidExt)")
 
             // Deterministic ID - derived from P256 Public Key
@@ -383,6 +495,20 @@ struct ContentView: View {
             print("Error in register: \(error)")
             errorMessage = "Failed to handle Liquid Auth URI Registration flow: \(error.localizedDescription)"
         }
+    }
+
+    private func createLiquidExt(
+        requestId: String,
+        address: String,
+        signature: String
+    ) -> [String: Any] {
+        return [
+            "type": "algorand",
+            "requestId": requestId,
+            "address": address,
+            "signature": signature,
+            "device": UIDevice.current.model
+        ]
     }
 }
 
