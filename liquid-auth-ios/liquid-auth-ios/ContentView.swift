@@ -19,47 +19,53 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            VStack {
-                Image(systemName: "globe")
-                    .imageScale(.large)
-                    .foregroundStyle(.tint)
-                Text("Ready to scan?")
-                
-                Button(action: {
-                    isScanning = true
-                }) {
-                    Text("Scan QR Code")
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                }
-                .sheet(isPresented: $isScanning) {
-                    QRCodeScannerView { scannedCode in
-                        isScanning = false // Dismiss the camera view immediately
-                        handleScannedCode(scannedCode)
+            NavigationStack {
+                VStack {
+                    Image(systemName: "globe")
+                        .imageScale(.large)
+                        .foregroundStyle(.tint)
+                    Text("Ready to scan?")
+                    
+                    NavigationLink(destination: QRCodeScannerView { scannedCode in
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { // Add a 0.5-second delay
+                            handleScannedCode(scannedCode)
+                        }
+                    }, isActive: $isScanning) {
+                        Text("Scan QR Code")
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+
+                    if let message = scannedMessage {
+                        Text("Message: \(message)")
+                            .padding()
+                    }
+
+                    if let error = errorMessage {
+                        Text("Error: \(error)")
+                            .foregroundColor(.red)
+                            .padding()
                     }
                 }
-
-                if let message = scannedMessage {
-                    Text("Message: \(message)")
-                        .padding()
+                .padding()
+                .actionSheet(isPresented: $showActionSheet) {
+                    actionSheet
                 }
-
-                if let error = errorMessage {
-                    Text("Error: \(error)")
-                        .foregroundColor(.red)
-                        .padding()
+                .navigationTitle("Liquid Auth")
+                .onDisappear {
+                    // Reset state when navigating back
+                    resetState()
                 }
             }
-            .padding()
 
-            // Show a loading overlay when isLoading is true
+            // Show the processing pop-up only when isLoading is true
             if isLoading {
                 VStack {
                     ProgressView("Processing...")
                         .padding()
-                        .background(Color.white)
+                        .background(Color.black)
                         .cornerRadius(10)
                         .shadow(radius: 10)
                 }
@@ -67,9 +73,6 @@ struct ContentView: View {
                 .background(Color.black.opacity(0.5))
                 .edgesIgnoringSafeArea(.all)
             }
-        }
-        .actionSheet(isPresented: $showActionSheet) {
-            actionSheet
         }
     }
 
@@ -79,30 +82,47 @@ struct ContentView: View {
             message: Text("Would you like to register or authenticate?"),
             buttons: [
                 .default(Text("Register")) {
-                    Task {
-                        isLoading = true
-                        defer { isLoading = false }
-                        if let origin = actionSheetOrigin, let requestId = actionSheetRequestId {
-                            await register(origin: origin, requestId: requestId)
+                    startProcessing {
+                        Task {
+                            if let origin = actionSheetOrigin, let requestId = actionSheetRequestId {
+                                await register(origin: origin, requestId: requestId)
+                            }
                         }
                     }
                 },
                 .default(Text("Authenticate")) {
-                    Task {
-                        isLoading = true
-                        defer { isLoading = false }
-                        if let origin = actionSheetOrigin, let requestId = actionSheetRequestId {
-                            await authenticate(origin: origin, requestId: requestId)
+                    startProcessing {
+                        Task {
+                            if let origin = actionSheetOrigin, let requestId = actionSheetRequestId {
+                                await authenticate(origin: origin, requestId: requestId)
+                            }
                         }
                     }
                 },
-                .cancel()
+                .cancel {
+                    resetState() // Reset state when "Cancel" is pressed
+                }
             ]
         )
     }
 
+    private func resetState() {
+        // Reset all states
+        isLoading = false
+        scannedMessage = nil
+        errorMessage = nil
+        showActionSheet = false
+        actionSheetOrigin = nil
+        actionSheetRequestId = nil
+    }
+
 
     private func handleScannedCode(_ code: String) {
+
+        isScanning = false // Dismiss the QR code scanner
+        isLoading = false // Ensure progress bar is hidden
+        showActionSheet = false // Ensure action sheet is hidden
+
         if code.starts(with: "FIDO:/") {
             // Decode the FIDO URI
 
@@ -203,8 +223,22 @@ struct ContentView: View {
             }
         }
 
+    private func startProcessing(action: @escaping () -> Void) {
+        // Ensure the progress bar only shows after the action sheet is dismissed
+        showActionSheet = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            isLoading = true
+            action()
+        }
+    }
+
     private func authenticate(origin: String, requestId: String) async {
         do {
+
+            defer { 
+                isLoading = false
+            }
+
             let userAgent = Utility.getUserAgent()
             
             let assertionApi = AssertionApi()
@@ -342,8 +376,17 @@ struct ContentView: View {
             let responseString = String(data: responseData, encoding: .utf8) ?? "Invalid response"
             print("Assertion result posted: \(responseString)")
 
-            scannedMessage = "Authentication completed successfully."
-            errorMessage = nil
+            // Parse the response to check for errors
+            if let responseJSON = try? JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any],
+                let errorReason = responseJSON["error"] as? String {
+                // If an error exists, propagate it
+                errorMessage = "Authentication failed: \(errorReason)"
+                scannedMessage = nil
+            } else {
+                // If no error, handle success
+                scannedMessage = "Authentication completed successfully."
+                errorMessage = nil
+            }
 
         // Next step
         } catch {
@@ -354,6 +397,10 @@ struct ContentView: View {
 
     private func register(origin: String, requestId: String) async {
         do {
+            defer { 
+                isLoading = false
+            }
+
             // Get the appropriate Algorand Address
             let phrase = "salon zoo engage submit smile frost later decide wing sight chaos renew lizard rely canal coral scene hobby scare step bus leaf tobacco slice"
             let seed = try Mnemonic.deterministicSeedString(from: phrase)
@@ -483,10 +530,23 @@ struct ContentView: View {
                 credential: credential,
                 liquidExt: liquidExt
             )
+
+            // Handle the server response
             let responseString = String(data: responseData, encoding: .utf8) ?? "Invalid response"
             print("Attestation result posted: \(responseString)")
-            scannedMessage = "Attestation result successfully posted: \(responseString)"
-            errorMessage = nil
+
+            // Parse the response to check for errors
+            if let responseJSON = try? JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any],
+            let errorReason = responseJSON["error"] as? String {
+                // If an error exists, propagate it
+                errorMessage = "Registration failed: \(errorReason)"
+                scannedMessage = nil
+            } else {
+                // If no error, handle success
+                scannedMessage = "Attestation result successfully posted: \(responseString)"
+                errorMessage = nil
+            }
+
         } catch {
             print("Error in register: \(error)")
             errorMessage = "Failed to handle Liquid Auth URI Registration flow: \(error.localizedDescription)"
