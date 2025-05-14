@@ -318,7 +318,7 @@ struct ContentView: View {
                 "response": [
                     "clientDataJSON": clientDataJSONData.base64URLEncodedString(),
                     "authenticatorData": authenticatorData.base64URLEncodedString(),
-                    "signature": signature.rawRepresentation.base64URLEncodedString()
+                    "signature": signature.derRepresentation.base64URLEncodedString()
                 ]
             ]
 
