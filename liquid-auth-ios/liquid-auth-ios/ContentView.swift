@@ -5,6 +5,7 @@ import x_hd_wallet_api
 import MnemonicSwift
 import CryptoKit
 import deterministicP256_swift
+import WebRTC
 
 
 struct ContentView: View {
@@ -205,14 +206,6 @@ struct ContentView: View {
 
             print("Origin: \(origin), Request ID: \(requestId)")
 
-            // Check if a credential for the specific origin already exists (future implementation)
-            // For now, proceed with registration
-            // isLoading = true
-
-            // defer {
-            //     isLoading = false
-            // }
-
 
             // Prompt the user to choose between registration and authentication
             DispatchQueue.main.async {
@@ -378,7 +371,7 @@ struct ContentView: View {
 
             // Parse the response to check for errors
             if let responseJSON = try? JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any],
-                let errorReason = responseJSON["error"] as? String {
+            let errorReason = responseJSON["error"] as? String {
                 // If an error exists, propagate it
                 errorMessage = "Authentication failed: \(errorReason)"
                 scannedMessage = nil
@@ -386,12 +379,55 @@ struct ContentView: View {
                 // If no error, handle success
                 scannedMessage = "Authentication completed successfully."
                 errorMessage = nil
+
+                startSignaling(origin: origin, requestId: requestId)
             }
+
+
 
         // Next step
         } catch {
             print("Error in authenticate: \(error)")
             errorMessage = "Failed to retrieve authentication options: \(error.localizedDescription)"
+        }
+    }
+
+    private func startSignaling(origin: String, requestId: String) {
+        let signalService = SignalService.shared
+        
+        signalService.start(url: origin, httpClient: URLSession.shared)
+        
+        
+        let iceServers = [
+            ["stun:stun.l.google.com:19302", nil, nil],
+            ["stun:stun1.l.google.com:19302", nil, nil],
+            ["stun:stun2.l.google.com:19302", nil, nil],
+            ["turn:global.turn.nodely.network:80", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
+            ["turns:global.turn.nodely.network:443", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
+            ["turn:eu.turn.nodely.io:80", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
+            ["turns:eu.turn.nodely.io:443", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
+            ["turn:us.turn.nodely.io:80", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
+            ["turns:us.turn.nodely.io:443", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
+            ]
+            
+        
+        
+        Task {
+            do {
+                try await signalService.connectToPeer(requestId: requestId, type: "offer", iceServerUrls: iceServers)
+                print("after signalService.connectToPeer")
+                // Set up message handling - similar to handleMessages in Kotlin
+                signalService.handleMessages(onMessage: { message in
+                    print("Received message: \(message)")
+                    // Handle incoming messages here
+                }, onStateChange: { state in
+                    print("Data channel state changed: \(state ?? "unknown")")
+                    // Handle state changes here
+                })
+                
+            } catch {
+                print("Failed to connect to peer: \(error.localizedDescription)")
+            }
         }
     }
 
