@@ -27,16 +27,21 @@ struct ContentView: View {
                         .foregroundStyle(.tint)
                     Text("Ready to scan?")
                     
-                    NavigationLink(destination: QRCodeScannerView { scannedCode in
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { // Add a 0.5-second delay
-                            handleScannedCode(scannedCode)
-                        }
-                    }, isActive: $isScanning) {
+                    Button(action: {
+                        isScanning = true
+                    }) {
                         Text("Scan QR Code")
                             .padding()
                             .background(Color.blue)
                             .foregroundColor(.white)
                             .cornerRadius(8)
+                    }
+                    .navigationDestination(isPresented: $isScanning) {
+                        QRCodeScannerView { scannedCode in
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                handleScannedCode(scannedCode)
+                            }
+                        }
                     }
 
                     if let message = scannedMessage {
@@ -268,12 +273,12 @@ struct ContentView: View {
                 // Parse the response data
             guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
                   let challengeBase64Url = json["challenge"] as? String,
-                  let allowCredentials = json["allowCredentials"] as? [[String: Any]],
-                  let rpId = json["rpId"] as? String else {
+                  let _ = json["allowCredentials"] as? [[String: Any]],
+                  let _ = json["rpId"] as? String else {
                 throw NSError(domain: "Missing required fields in response", code: -1, userInfo: nil)
             }
             
-            print("Response: \(String(data: data, encoding: .utf8))")
+            print("Response: \(String(describing: String(data: data, encoding: .utf8)))")
 
             print("Challenge (Base64): \(challengeBase64Url)")
             print("Challenge Decoded: \([UInt8](Utility.decodeBase64Url(challengeBase64Url)!))")
@@ -315,7 +320,7 @@ struct ContentView: View {
             
             
             guard let clientDataJSONData = try? JSONSerialization.data(withJSONObject: clientData, options: []),
-                let clientDataJSON = String(data: clientDataJSONData, encoding: .utf8) else {
+                  let _ = String(data: clientDataJSONData, encoding: .utf8) else {
                 throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create clientDataJSON"])
             }
 
@@ -511,7 +516,7 @@ struct ContentView: View {
             ]
 
             guard let clientDataJSONData = try? JSONSerialization.data(withJSONObject: clientData, options: []),
-                let clientDataJSON = String(data: clientDataJSONData, encoding: .utf8) else {
+                  let _ = String(data: clientDataJSONData, encoding: .utf8) else {
                 throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create clientDataJSON"])
             }
 

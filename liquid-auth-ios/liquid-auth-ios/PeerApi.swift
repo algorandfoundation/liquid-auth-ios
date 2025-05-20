@@ -69,7 +69,13 @@ class PeerApi {
         guard let peerConnection = peerConnection else {
             throw NSError(domain: "PeerApi", code: -1, userInfo: [NSLocalizedDescriptionKey: "PeerConnection is null, ensure you are connected"])
         }
-        peerConnection.add(candidate)
+        peerConnection.add(candidate, completionHandler: { error in
+            if let error = error {
+                print("addIceCandidate: Failed to add ICE candidate: \(error)")
+            } else {
+                print("addIceCandidate: ICE candidate added successfully.")
+            }
+        })
     }
 
     // Set the Local Description

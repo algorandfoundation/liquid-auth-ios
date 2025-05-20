@@ -10,6 +10,7 @@ class SignalClient {
     var peerClient: PeerApi?
     private var candidatesBuffer: [RTCIceCandidate] = []
     private var eventQueue: [(String, QueuedEventData)] = []
+    private var dataChannelDelegates: [RTCDataChannel: DataChannelDelegate] = [:]
 
     
 
@@ -29,8 +30,7 @@ class SignalClient {
         onMessage: @escaping (String) -> Void,
         onStateChange: @escaping (String?) -> Void
     ) {
-        // Set up the data channel delegate
-        dataChannel.delegate = DataChannelDelegate(
+        let delegate = DataChannelDelegate(
             onMessage: { message in
                 onMessage(message)
             },
@@ -38,9 +38,11 @@ class SignalClient {
                 onStateChange(state)
             }
         )
+        dataChannel.delegate = delegate
+        dataChannelDelegates[dataChannel] = delegate
     }
 
-func connectToPeer(
+    func connectToPeer(
         requestId: String,
         type: String,
         iceServers: [RTCIceServer],
@@ -57,7 +59,7 @@ func connectToPeer(
             poolSize: 10,
             onDataChannel: { [weak self] dataChannel in
                 print("Received data channel from remote peer: \(dataChannel.label)")
-                dataChannel.delegate = DataChannelDelegate(
+                let delegate = DataChannelDelegate(
                     onMessage: { message in
                         print("Received message: \(message)")
                     },
@@ -68,10 +70,12 @@ func connectToPeer(
                         }
                     }
                 )
+                dataChannel.delegate = delegate
+                self?.dataChannelDelegates[dataChannel] = delegate
             }
         )
 
-        if let peerConnection = peerClient?.peerConnection {
+        if (peerClient?.peerConnection) != nil {
             print("ss: Peer connection created successfully.")
         } else {
             print("ss: Failed to create peer connection!")
@@ -284,7 +288,13 @@ func connectToPeer(
         print("Adding ICE candidate: \(iceCandidate)")
 
         if let peerConnection = peerClient?.peerConnection {
-            peerConnection.add(iceCandidate)
+            peerConnection.add(iceCandidate, completionHandler: { error in
+                if let error = error {
+                    print("handleIceCandidate: Failed to add ICE candidate: \(error)")
+                } else {
+                    print("handleIceCandidate: ICE candidate added successfully.")
+                }
+            })
         } else {
             candidatesBuffer.append(iceCandidate)
         }
@@ -293,8 +303,14 @@ func connectToPeer(
     // Process buffered ICE candidates once the peer connection is ready
     private func processBufferedCandidates() {
         guard let peerConnection = peerClient?.peerConnection else { return }
-        for candidate in candidatesBuffer {
-            peerConnection.add(candidate)
+        for iceCandidate in candidatesBuffer {
+            peerConnection.add(iceCandidate, completionHandler: { error in
+                if let error = error {
+                    print("processBufferedCandidates: Failed to add ICE candidate: \(error)")
+                } else {
+                    print("processBufferedCandidates: ICE candidate added successfully.")
+                }
+            })
         }
         candidatesBuffer.removeAll()
     }
