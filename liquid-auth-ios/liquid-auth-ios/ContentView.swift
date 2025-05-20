@@ -402,32 +402,27 @@ struct ContentView: View {
             ["stun:stun.l.google.com:19302", nil, nil],
             ["stun:stun1.l.google.com:19302", nil, nil],
             ["stun:stun2.l.google.com:19302", nil, nil],
-            ["turn:global.turn.nodely.network:80", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
-            ["turns:global.turn.nodely.network:443", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
-            ["turn:eu.turn.nodely.io:80", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
-            ["turns:eu.turn.nodely.io:443", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
-            ["turn:us.turn.nodely.io:80", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
-            ["turns:us.turn.nodely.io:443", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
+            // ["turn:global.turn.nodely.network:80", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
+            // ["turns:global.turn.nodely.network:443", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
+            // ["turn:eu.turn.nodely.io:80", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
+            // ["turns:eu.turn.nodely.io:443", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
+            // ["turn:us.turn.nodely.io:80", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
+            // ["turns:us.turn.nodely.io:443", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
             ]
             
         
         
         Task {
-            do {
-                try await signalService.connectToPeer(requestId: requestId, type: "offer", iceServerUrls: iceServers)
-                print("after signalService.connectToPeer")
-                // Set up message handling - similar to handleMessages in Kotlin
-                signalService.handleMessages(onMessage: { message in
-                    print("Received message: \(message)")
-                    // Handle incoming messages here
-                }, onStateChange: { state in
-                    print("Data channel state changed: \(state ?? "unknown")")
-                    // Handle state changes here
-                })
-                
-            } catch {
-                print("Failed to connect to peer: \(error.localizedDescription)")
-            }
+            signalService.connectToPeer(requestId: requestId, type: "answer", origin: origin, iceServerUrls: iceServers)
+            print("after signalService.connectToPeer")
+            // Set up message handling - similar to handleMessages in Kotlin
+            signalService.handleMessages(onMessage: { message in
+                print("Received message: \(message)")
+                // Handle incoming messages here
+            }, onStateChange: { state in
+                print("Data channel state changed: \(state ?? "unknown")")
+                // Handle state changes here
+            })
         }
     }
 

@@ -5,8 +5,10 @@ class PeerApi {
     private let peerConnectionFactory: RTCPeerConnectionFactory
     var peerConnection: RTCPeerConnection?
     private var dataChannel: RTCDataChannel?
+    private let onDataChannel: (RTCDataChannel) -> Void
 
-    init(iceServers: [RTCIceServer], poolSize: Int) {
+    init(iceServers: [RTCIceServer], poolSize: Int, onDataChannel: @escaping (RTCDataChannel) -> Void) {
+        self.onDataChannel = onDataChannel
         // Initialize the PeerConnectionFactory
         RTCPeerConnectionFactory.initialize()
         self.peerConnectionFactory = RTCPeerConnectionFactory()
@@ -18,26 +20,30 @@ class PeerApi {
 
         // Create the PeerConnection
         let constraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil)
-        self.peerConnection = peerConnectionFactory.peerConnection(with: configuration, constraints: constraints, delegate: PeerConnectionDelegate(
-            onIceCandidate: { candidate in
-                print("Generated ICE candidate: \(candidate)")
-            },
-            onDataChannel: { dataChannel in
-                print("Data channel opened: \(dataChannel.label)")
-            },
-            onConnectionStateChange: { state in
-                print("Peer connection state changed: \(state.rawValue)")
-                if state == .connected {
-                    print("Retrying data channel creation...")
-                    let dataChannel = self.peerConnection?.dataChannel(forLabel: "liquid", configuration: RTCDataChannelConfiguration())
-                    if let dataChannel = dataChannel {
-                        print("Data channel created successfully on retry: \(dataChannel.label)")
-                    } else {
-                        print("Failed to create data channel on retry.")
+        self.peerConnection = peerConnectionFactory.peerConnection(
+            with: configuration,
+            constraints: constraints,
+            delegate: PeerConnectionDelegate(
+                onIceCandidate: { candidate in
+                    print("Generated ICE candidate: \(candidate)")
+                },
+                onDataChannel: { dataChannel in
+                    print("Data channel opened: \(dataChannel.label)")
+                    onDataChannel(dataChannel) // <-- Call the closure heres
+                },
+                onConnectionStateChange: { state in
+                    print("Peer connection state changed: \(state.rawValue)")
+                    if state == .connected {
+                        print("Retrying data channel creation...")
+                        let dataChannel = self.peerConnection?.dataChannel(forLabel: "liquid", configuration: RTCDataChannelConfiguration())
+                        if let dataChannel = dataChannel {
+                            print("Data channel created successfully on retry: \(dataChannel.label)")
+                        } else {
+                            print("Failed to create data channel on retry.")
+                        }
                     }
                 }
-            }
-        ))
+            ))
     }
 
     // Create a new Peer Connection
@@ -197,15 +203,7 @@ class PeerConnectionDelegate: NSObject, RTCPeerConnectionDelegate {
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didOpen dataChannel: RTCDataChannel) {
         print("Data channel opened: \(dataChannel.label)")
-        let delegate = DataChannelDelegate(
-            onMessage: { message in
-                print("Received message: \(message)")
-            },
-            onStateChange: { state in
-                print("Data channel state changed: \(state ?? "unknown")")
-            }
-        )
-        dataChannel.delegate = delegate
+        self.onDataChannel(dataChannel)
     }
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didAdd stream: RTCMediaStream) {
