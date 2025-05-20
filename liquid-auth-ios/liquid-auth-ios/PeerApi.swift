@@ -7,7 +7,12 @@ class PeerApi {
     private var dataChannel: RTCDataChannel?
     private let onDataChannel: (RTCDataChannel) -> Void
 
-    init(iceServers: [RTCIceServer], poolSize: Int, onDataChannel: @escaping (RTCDataChannel) -> Void) {
+    init(
+        iceServers: [RTCIceServer],
+        poolSize: Int,
+        onDataChannel: @escaping (RTCDataChannel) -> Void,
+        onIceCandidate: @escaping (RTCIceCandidate) -> Void
+        ){
         self.onDataChannel = onDataChannel
         // Initialize the PeerConnectionFactory
         RTCPeerConnectionFactory.initialize()
@@ -19,27 +24,22 @@ class PeerApi {
         configuration.iceCandidatePoolSize = Int32(poolSize)
 
         // Create the PeerConnection
-        let constraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil)
+        let constraints = RTCMediaConstraints(mandatoryConstraints: ["OfferToReceiveAudio": "false", "OfferToReceiveVideo": "false"], optionalConstraints: nil)
         self.peerConnection = peerConnectionFactory.peerConnection(
             with: configuration,
             constraints: constraints,
             delegate: PeerConnectionDelegate(
-                onIceCandidate: { candidate in
-                    print("Generated ICE candidate: \(candidate)")
-                },
-                onDataChannel: { dataChannel in
-                    print("Data channel opened: \(dataChannel.label)")
-                    onDataChannel(dataChannel) // <-- Call the closure heres
-                },
+                onIceCandidate: onIceCandidate,
+                onDataChannel: onDataChannel,
                 onConnectionStateChange: { state in
-                    print("Peer connection state changed: \(state.rawValue)")
+                    print("PeerAPI: Peer connection state changed: \(state.rawValue)")
                     if state == .connected {
-                        print("Retrying data channel creation...")
+                        print("PeerAPI: Retrying data channel creation...")
                         let dataChannel = self.peerConnection?.dataChannel(forLabel: "liquid", configuration: RTCDataChannelConfiguration())
                         if let dataChannel = dataChannel {
-                            print("Data channel created successfully on retry: \(dataChannel.label)")
+                            print("PeerAPI: Data channel created successfully on retry: \(dataChannel.label)")
                         } else {
-                            print("Failed to create data channel on retry.")
+                            print("PeerAPI: Failed to create data channel on retry.")
                         }
                     }
                 }
@@ -56,7 +56,7 @@ class PeerApi {
         let configuration = RTCConfiguration()
         configuration.iceServers = iceServers
 
-        let constraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil)
+        let constraints = RTCMediaConstraints(mandatoryConstraints: ["OfferToReceiveAudio": "false", "OfferToReceiveVideo": "false"], optionalConstraints: nil)
         peerConnection = peerConnectionFactory.peerConnection(with: configuration, constraints: constraints, delegate: PeerConnectionDelegate(
             onIceCandidate: onIceCandidate,
             onDataChannel: onDataChannel,
@@ -71,9 +71,9 @@ class PeerApi {
         }
         peerConnection.add(candidate, completionHandler: { error in
             if let error = error {
-                print("addIceCandidate: Failed to add ICE candidate: \(error)")
+                print("PeerAPI: addIceCandidate: Failed to add ICE candidate: \(error)")
             } else {
-                print("addIceCandidate: ICE candidate added successfully.")
+                print("PeerAPI: addIceCandidate: ICE candidate added successfully.")
             }
         })
     }
@@ -81,38 +81,38 @@ class PeerApi {
     // Set the Local Description
     func setLocalDescription(_ description: RTCSessionDescription, completion: @escaping (Error?) -> Void) {
         guard let peerConnection = peerConnection else {
-            print("PeerConnection is null, ensure you are connected")
+            print("PeerAPI: PeerConnection is null, ensure you are connected")
             return
         }
-        print("Setting local description: \(description.type.rawValue)")
+        print("PeerAPI: Setting local description: \(description.type.rawValue)")
         peerConnection.setLocalDescription(description, completionHandler: completion)
     }
 
     func setRemoteDescription(_ description: RTCSessionDescription, completion: @escaping (Error?) -> Void) {
         guard let peerConnection = peerConnection else {
-            print("PeerConnection is null, ensure you are connected")
+            print("PeerAPI: PeerConnection is null, ensure you are connected")
             return
         }
 
-        if peerConnection.signalingState == .haveLocalOffer {
-            print("Cannot set remote offer while in have-local-offer state")
+        if peerConnection.signalingState == .haveLocalOffer && description.type == .offer {
+            print("PeerAPI: PeerAPI setRemoteDescription: Cannot set remote offer while in have-local-offer state")
             return
         }
 
-        print("Setting remote description: \(description.type.rawValue)")
+        print("PeerAPI: Setting remote description: \(description.type.rawValue)")
         peerConnection.setRemoteDescription(description, completionHandler: completion)
     }
 
     // Create an Offer
     func createOffer(completion: @escaping (RTCSessionDescription?) -> Void) {
         guard let peerConnection = peerConnection else {
-            print("PeerConnection is null, ensure you are connected")
+            print("PeerAPI: PeerConnection is null, ensure you are connected")
             completion(nil)
             return
         }
-        peerConnection.offer(for: RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil)) { sdp, error in
+        peerConnection.offer(for: RTCMediaConstraints(mandatoryConstraints: ["OfferToReceiveAudio": "false", "OfferToReceiveVideo": "false"], optionalConstraints: nil)) { sdp, error in
             if let error = error {
-                print("Failed to create offer: \(error)")
+                print("PeerAPI: Failed to create offer: \(error)")
                 completion(nil)
             } else {
                 completion(sdp)
@@ -123,12 +123,12 @@ class PeerApi {
     // Create an Answer
     func createAnswer(completion: @escaping (RTCSessionDescription?) -> Void) {
         guard let peerConnection = peerConnection else {
-            print("PeerConnection is null, ensure you are connected")
+            print("PeerAPI: PeerConnection is null, ensure you are connected")
             return
         }
-        peerConnection.answer(for: RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil)) { sdp, error in
+        peerConnection.answer(for: RTCMediaConstraints(mandatoryConstraints: ["OfferToReceiveAudio": "false", "OfferToReceiveVideo": "false"], optionalConstraints: nil)) { sdp, error in
             if let error = error {
-                print("Failed to create answer: \(error)")
+                print("PeerAPI: Failed to create answer: \(error)")
                 completion(nil)
             } else {
                 completion(sdp)
@@ -139,16 +139,16 @@ class PeerApi {
     // Create a Data Channel
     func createDataChannel(label: String) -> RTCDataChannel? {
         let config = RTCDataChannelConfiguration()
-        print("Creating data channel with label: \(label)")
+        print("PeerAPI: Creating data channel with label: \(label)")
         self.dataChannel = peerConnection?.dataChannel(forLabel: label, configuration: config)
 
         if let dataChannel = self.dataChannel {
             let delegate = DataChannelDelegate(
                 onMessage: { message in
-                    print("Received message: \(message)")
+                    print("PeerAPI: Received message: \(message)")
                 },
                 onStateChange: { state in
-                    print("Data channel state changed: \(state ?? "unknown")")
+                    print("PeerAPI: Data channel state changed: \(state ?? "unknown")")
                 }
             )
             dataChannel.delegate = delegate
@@ -174,7 +174,7 @@ class PeerApi {
     // Send a message through the Data Channel
     func send(_ message: String) {
         guard let dataChannel = dataChannel else {
-            print("peerApi: Data channel is not available.")
+            print("PeerAPI: peerApi: Data channel is not available.")
             return
         }
 
@@ -202,51 +202,52 @@ class PeerConnectionDelegate: NSObject, RTCPeerConnectionDelegate {
         onDataChannel: @escaping (RTCDataChannel) -> Void,
         onConnectionStateChange: @escaping (RTCPeerConnectionState) -> Void
     ) {
+        print("PeerAPI: PeerConnectionDelegate initialized")
         self.onIceCandidate = onIceCandidate
         self.onDataChannel = onDataChannel
         self.onConnectionStateChange = onConnectionStateChange
     }
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didOpen dataChannel: RTCDataChannel) {
-        print("Data channel opened: \(dataChannel.label)")
+        print("PeerAPI: Data channel opened: \(dataChannel.label)")
         self.onDataChannel(dataChannel)
     }
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didAdd stream: RTCMediaStream) {
-        print("Media stream added: \(stream)")
+        print("PeerAPI: Media stream added: \(stream)")
     }
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didRemove stream: RTCMediaStream) {
-        print("Media stream removed: \(stream)")
+        print("PeerAPI: Media stream removed: \(stream)")
     }
 
     func peerConnectionShouldNegotiate(_ peerConnection: RTCPeerConnection) {
-        print("Renegotiation needed")
+        print("PeerAPI: Renegotiation needed")
     }
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceConnectionState) {
-        print("ICE connection state changed: \(newState)")
+        print("PeerAPI: ICE connection state changed: \(newState)")
     }
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceGatheringState) {
-        print("ICE gathering state changed: \(newState)")
+        print("PeerAPI: ICE gathering state changed: \(newState)")
     }
     
     func peerConnection(_ peerConnection: RTCPeerConnection, didChange stateChanged: RTCSignalingState) {
-        print("ICE signaling state changed: \(stateChanged)")
+        print("PeerAPI: ICE signaling state changed: \(stateChanged)")
     }
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didGenerate candidate: RTCIceCandidate) {
-        print("ICE candidate: \(candidate)")
+        print("PeerAPI: ICE candidate: \(candidate)")
         onIceCandidate(candidate)
     }
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didRemove candidates: [RTCIceCandidate]) {
-        print("ICE candidates removed: \(candidates)")
+        print("PeerAPI: ICE candidates removed: \(candidates)")
     }
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCPeerConnectionState) {
-        print("Peer connection state changed: \(newState.rawValue)")
+        print("PeerAPI: Peer connection state changed: \(newState.rawValue)")
         onConnectionStateChange(newState)
     }
 }

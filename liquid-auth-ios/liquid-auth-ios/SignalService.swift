@@ -51,7 +51,7 @@ class SignalService {
     }
 
     // MARK: - Connect to a peer by request ID
-    func connectToPeer(requestId: String, type: String, origin: String, iceServerUrls: [[String?]]) {
+    func connectToPeer(requestId: String, type: String, origin: String, iceServers: [RTCIceServer]) {
 
         self.currentPeerType = type
 
@@ -63,23 +63,6 @@ class SignalService {
         // Ensure the socket is connected
         signalClient = SignalClient(url: origin, service: self)
         signalClient?.connectSocket()
-
-        // Convert ICE server definitions to RTCIceServer objects
-        let iceServers = iceServerUrls.compactMap { serverInfo -> RTCIceServer? in
-            guard let url = serverInfo[0] else {
-                print("Invalid ICE server URL.")
-                return nil
-            }
-            let username = serverInfo[1]
-            let credential = serverInfo[2]
-
-            // If username or credential is nil, use the simpler initializer
-            if username == nil || credential == nil {
-                return RTCIceServer(urlStrings: [url])
-            } else {
-                return RTCIceServer(urlStrings: [url], username: username, credential: credential)
-            }
-        }
 
         print("ICE servers: \(iceServers)")
         

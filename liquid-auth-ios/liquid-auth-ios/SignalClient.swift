@@ -72,6 +72,15 @@ class SignalClient {
                 )
                 dataChannel.delegate = delegate
                 self?.dataChannelDelegates[dataChannel] = delegate
+            },
+            onIceCandidate: { [weak self] candidate in
+                guard let self = self else { return }
+                print("Generated ICE candidate: \(candidate)")
+                self.send(event: "candidate", data: [
+                    "candidate": candidate.sdp,
+                    "sdpMid": candidate.sdpMid ?? "",
+                    "sdpMLineIndex": candidate.sdpMLineIndex
+                ])
             }
         )
 
@@ -195,9 +204,18 @@ class SignalClient {
         }
 
         socket.on("answer-description") { [weak self] data, _ in
-            guard let self = self, let eventData = data.first as? [String: Any] else { return }
-            print("Received SDP answer: \(eventData)")
-            self.handleAnswerDescription(eventData)
+            print("hej")
+            guard let self = self else { return }
+            // Try to handle as dictionary first, then as string
+            if let eventData = data.first as? [String: Any] {
+                print("Received SDP answer as dictionary: \(eventData)")
+                self.handleAnswerDescription(eventData)
+            } else if let sdp = data.first as? String {
+                print("Received SDP answer as string: \(sdp)")
+                self.handleAnswerDescription(sdp)
+            } else {
+                print("Received SDP answer in unknown format: \(data)")
+            }
         }
 
         socket.on("candidate") { [weak self] data, _ in
@@ -270,6 +288,26 @@ class SignalClient {
             return
         }
 
+        peerClient?.setRemoteDescription(sessionDescription, completion: { error in
+            if let error = error {
+                print("Failed to set remote description: \(error)")
+            } else {
+                // Process buffered ICE candidates
+                self.processBufferedCandidates()
+            }
+        })
+    }
+
+    private func handleAnswerDescription(_ sdp: String) {
+        // If you know this is always an answer, you can hardcode the type
+        let sessionDescription = RTCSessionDescription(type: .answer, sdp: sdp)
+
+        if peerClient?.peerConnection?.signalingState != .haveLocalOffer {
+            print("Cannot set remote answer unless in have-local-offer state")
+            return
+        }
+
+        print("handleAnswerDescription SDP: Setting remote description with session description.")
         peerClient?.setRemoteDescription(sessionDescription, completion: { error in
             if let error = error {
                 print("Failed to set remote description: \(error)")

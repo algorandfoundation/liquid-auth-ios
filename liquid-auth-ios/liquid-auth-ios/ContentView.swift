@@ -401,24 +401,21 @@ struct ContentView: View {
         let signalService = SignalService.shared
         
         signalService.start(url: origin, httpClient: URLSession.shared)
-        
-        
+
         let iceServers = [
-            ["stun:stun.l.google.com:19302", nil, nil],
-            ["stun:stun1.l.google.com:19302", nil, nil],
-            ["stun:stun2.l.google.com:19302", nil, nil],
-            // ["turn:global.turn.nodely.network:80", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
-            // ["turns:global.turn.nodely.network:443", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
-            // ["turn:eu.turn.nodely.io:80", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
-            // ["turns:eu.turn.nodely.io:443", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
-            // ["turn:us.turn.nodely.io:80", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
-            // ["turns:us.turn.nodely.io:443", "liquid-auth", "sqmcP4MiTKMT4TGEDSk9jgHY"],
-            ]
-            
-        
+            RTCIceServer(urlStrings: ["stun:stun.l.google.com:19302"]),
+            RTCIceServer(urlStrings: ["stun:stun1.l.google.com:19302"]),
+            RTCIceServer(urlStrings: ["stun:stun2.l.google.com:19302"]),
+            RTCIceServer(urlStrings: ["turn:global.turn.nodely.network:80"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
+            RTCIceServer(urlStrings: ["turns:global.turn.nodely.network:443"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
+            RTCIceServer(urlStrings: ["turn:eu.turn.nodely.io:80"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
+            RTCIceServer(urlStrings: ["turns:eu.turn.nodely.io:443"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
+            RTCIceServer(urlStrings: ["turn:us.turn.nodely.io:80"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
+            RTCIceServer(urlStrings: ["turns:us.turn.nodely.io:443"],  username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
+        ]
         
         Task {
-            signalService.connectToPeer(requestId: requestId, type: "answer", origin: origin, iceServerUrls: iceServers)
+            signalService.connectToPeer(requestId: requestId, type: "answer", origin: origin, iceServers: iceServers)
             print("after signalService.connectToPeer")
             // Set up message handling - similar to handleMessages in Kotlin
             signalService.handleMessages(onMessage: { message in
