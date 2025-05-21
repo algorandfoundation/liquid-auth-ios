@@ -220,6 +220,7 @@ class PeerConnectionDelegate: NSObject, RTCPeerConnectionDelegate {
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didOpen dataChannel: RTCDataChannel) {
         print("PeerAPI: Data channel opened: \(dataChannel.label)")
+        print("Assigning DataChannelDelegate NOW")
         self.onDataChannel(dataChannel)
     }
 

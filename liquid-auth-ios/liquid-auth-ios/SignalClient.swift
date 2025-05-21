@@ -11,6 +11,7 @@ class SignalClient {
     private var candidatesBuffer: [RTCIceCandidate] = []
     private var eventQueue: [(String, QueuedEventData)] = []
     private var dataChannelDelegates: [RTCDataChannel: DataChannelDelegate] = [:]
+    var onSocketConnected: (() -> Void)?
 
     
 
@@ -177,6 +178,7 @@ class SignalClient {
     private func setupSocketListeners() {
         socket.on(clientEvent: .connect) { _, _ in
             print("Socket.IO connected")
+            self.onSocketConnected?()
             self.processEventQueue()
         }
 

@@ -11,7 +11,6 @@ class SignalService {
     private var peerConnection: RTCPeerConnection?
     private var dataChannelDelegates: [RTCDataChannel: DataChannelDelegate] = [:]
 
-
     private var lastKnownReferer: String?
     private var isDeepLink: Bool = true
 
@@ -23,10 +22,7 @@ class SignalService {
     func start(url: String, httpClient: URLSession) {
         // Initialize the SignalClient
         signalClient = SignalClient(url: url, service: self)
-
         signalClient?.connectSocket()
-
-        // Send a notification to indicate the service has started
         sendNotification(title: "Signal Service", body: "Service started successfully.")
     }
 
@@ -37,7 +33,6 @@ class SignalService {
         peerClient = nil
         dataChannel = nil
         peerConnection = nil
-
         sendNotification(title: "Signal Service", body: "Service stopped.")
     }
 
@@ -70,34 +65,38 @@ class SignalService {
 
         // Ensure the socket is connected
         signalClient = SignalClient(url: origin, service: self)
-        signalClient?.connectSocket()
 
-        print("ICE servers: \(iceServers)")
+        // Wait for socket connection before starting signaling
+        signalClient?.onSocketConnected = { [weak self] in
+            guard let self = self else { return }
+            print("Socket connected, now starting WebRTC signaling.")
+            let returnedDataChannel = self.signalClient?.connectToPeer(
+                requestId: requestId,
+                type: type,
+                iceServers: iceServers,
+                onDataChannelOpen: { [weak self] dataChannel in
+                    print("Data channel is open and ready: \(dataChannel.label)")
+                    self?.dataChannel = dataChannel
+                },
+                onMessage: onMessage,
+                onStateChange: onStateChange
+            )
 
-        print("About to call signalClient.connectToPeer.")
-        // Pass the closures down to SignalClient
-        let returnedDataChannel = signalClient?.connectToPeer(
-            requestId: requestId,
-            type: type,
-            iceServers: iceServers,
-            onDataChannelOpen: { [weak self] dataChannel in
-                print("Data channel is open and ready: \(dataChannel.label)")
-                self?.dataChannel = dataChannel
-            },
-            onMessage: onMessage,
-            onStateChange: onStateChange
-        )
+            self.peerClient = self.signalClient?.peerClient
+            self.peerConnection = self.peerClient?.peerConnection
 
-        peerClient = signalClient?.peerClient
-        peerConnection = peerClient?.peerConnection
+            if let peerConnection = self.peerConnection {
+                print("Peer connection state: \(peerConnection.connectionState.rawValue)")
+            } else {
+                print("Peer connection is nil.")
+            }
 
-        if let peerConnection = peerConnection {
-            print("Peer connection state: \(peerConnection.connectionState.rawValue)")
-        } else {
-            print("Peer connection is nil.")
+            self.sendNotification(title: "Peer Connection", body: "Connected to peer with request ID: \(requestId).")
         }
 
-        sendNotification(title: "Peer Connection", body: "Connected to peer with request ID: \(requestId).")
+        signalClient?.connectSocket()
+        print("ICE servers: \(iceServers)")
+        print("Waiting for socket to connect before signaling.")
     }
 
     // MARK: - Send a message through the data channel

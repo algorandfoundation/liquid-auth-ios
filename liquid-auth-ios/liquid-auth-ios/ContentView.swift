@@ -403,9 +403,9 @@ struct ContentView: View {
         signalService.start(url: origin, httpClient: URLSession.shared)
 
         let iceServers = [
-            RTCIceServer(urlStrings: ["stun:stun.l.google.com:19302"]),
-            RTCIceServer(urlStrings: ["stun:stun1.l.google.com:19302"]),
-            RTCIceServer(urlStrings: ["stun:stun2.l.google.com:19302"]),
+            // RTCIceServer(urlStrings: ["stun:stun.l.google.com:19302"]),
+            // RTCIceServer(urlStrings: ["stun:stun1.l.google.com:19302"]),
+            // RTCIceServer(urlStrings: ["stun:stun2.l.google.com:19302"]),
             RTCIceServer(urlStrings: ["turn:global.turn.nodely.network:80"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
             // RTCIceServer(urlStrings: ["turns:global.turn.nodely.network:443"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
             // RTCIceServer(urlStrings: ["turn:eu.turn.nodely.io:80"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
@@ -421,11 +421,11 @@ struct ContentView: View {
                 origin: origin,
                 iceServers: iceServers,
                 onMessage: { message in
-                    print("Received message: \(message)")
+                    print("ContentView: Received message: \(message)")
                     // Handle incoming messages here
                 },
                 onStateChange: { state in
-                    print("Data channel state changed: \(state ?? "unknown")")
+                    print("ContentView: Data channel state changed: \(state ?? "unknown")")
                     // Handle state changes here
                     if state == "open" {
                         SignalService.shared.sendMessage("test")

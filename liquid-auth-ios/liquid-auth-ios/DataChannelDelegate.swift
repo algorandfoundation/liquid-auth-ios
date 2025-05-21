@@ -10,9 +10,11 @@ class DataChannelDelegate: NSObject, RTCDataChannelDelegate {
         onStateChange: ((String?) -> Void)? = nil,
         onBufferedAmountChange: ((UInt64) -> Void)? = nil
     ) {
+        print("DataChannelDelegate initialized!")
         self.onMessage = onMessage
         self.onStateChange = onStateChange!
         self.onBufferedAmountChange = onBufferedAmountChange
+
     }
 
     deinit {
@@ -28,12 +30,13 @@ class DataChannelDelegate: NSObject, RTCDataChannelDelegate {
     }
 
     func dataChannel(_ dataChannel: RTCDataChannel, didChangeBufferedAmount amount: UInt64) {
+        print("DataChannelDelegate: Buffered amount changed to: \(amount)")
         onBufferedAmountChange?(amount)
     }
 
     func dataChannelDidChangeState(_ dataChannel: RTCDataChannel) {
         let state = dataChannel.readyState.description
-        print("DataChannelDelegate: Data channel state changed to: \(state)")
+        print("DataChannelDelegate: Data channel state changed to: \(state) at \(Date())")
         onStateChange(state)
     }
 }
