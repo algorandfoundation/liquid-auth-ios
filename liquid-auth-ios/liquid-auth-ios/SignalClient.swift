@@ -63,7 +63,8 @@ class SignalClient {
             onIceCandidate: { [weak self] candidate in
                 guard let self = self else { return }
                 print("Generated ICE candidate: \(candidate)")
-                self.send(event: "candidate", data: [
+                let candidateEvent = (type == "offer") ? "offer-candidate" : "answer-candidate"
+                self.send(event: candidateEvent, data: [
                     "candidate": candidate.sdp,
                     "sdpMid": candidate.sdpMid ?? "",
                     "sdpMLineIndex": candidate.sdpMLineIndex
@@ -213,6 +214,17 @@ class SignalClient {
         socket.on("candidate") { [weak self] data, _ in
             guard let self = self, let eventData = data.first as? [String: Any] else { return }
             print("Received ICE candidate: \(eventData)")
+            self.handleIceCandidate(eventData)
+        }
+
+        socket.on("offer-candidate") { [weak self] data, _ in
+            guard let self = self, let eventData = data.first as? [String: Any] else { return }
+            print("Received offer ICE candidate: \(eventData)")
+            self.handleIceCandidate(eventData)
+        }
+        socket.on("answer-candidate") { [weak self] data, _ in
+            guard let self = self, let eventData = data.first as? [String: Any] else { return }
+            print("Received answer ICE candidate: \(eventData)")
             self.handleIceCandidate(eventData)
         }
 

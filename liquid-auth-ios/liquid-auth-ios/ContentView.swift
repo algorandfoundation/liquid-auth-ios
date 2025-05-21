@@ -549,8 +549,6 @@ struct ContentView: View {
                 startSignaling(origin: origin, requestId: requestId)
             }
 
-
-
         // Next step
         } catch {
             print("Error in authenticate: \(error)")
@@ -563,16 +561,19 @@ struct ContentView: View {
         
         signalService.start(url: origin, httpClient: URLSession.shared)
 
+        let NODELY_TURN_USERNAME = "liquid-auth"
+        let NODELY_TURN_CREDENTIAL = "sqmcP4MiTKMT4TGEDSk9jgHY"
+
         let iceServers = [
             RTCIceServer(urlStrings: ["stun:stun.l.google.com:19302"]),
             RTCIceServer(urlStrings: ["stun:stun1.l.google.com:19302"]),
             RTCIceServer(urlStrings: ["stun:stun2.l.google.com:19302"]),
-            RTCIceServer(urlStrings: ["turn:global.turn.nodely.network:80"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
-            RTCIceServer(urlStrings: ["turns:global.turn.nodely.network:443"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
-            RTCIceServer(urlStrings: ["turn:eu.turn.nodely.io:80"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
-            RTCIceServer(urlStrings: ["turns:eu.turn.nodely.io:443"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
-            RTCIceServer(urlStrings: ["turn:us.turn.nodely.io:80"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
-            RTCIceServer(urlStrings: ["turns:us.turn.nodely.io:443"],  username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
+            RTCIceServer(urlStrings: ["turn:global.turn.nodely.network:80?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
+            RTCIceServer(urlStrings: ["turns:global.turn.nodely.network:443?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
+            RTCIceServer(urlStrings: ["turn:eu.turn.nodely.io:80?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
+            RTCIceServer(urlStrings: ["turns:eu.turn.nodely.io:443?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
+            RTCIceServer(urlStrings: ["turn:us.turn.nodely.io:80?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
+            RTCIceServer(urlStrings: ["turns:us.turn.nodely.io:443?transport=tcp"],  username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
         ]
         
         Task {
