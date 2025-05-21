@@ -9,6 +9,8 @@ class SignalService {
     private var peerClient: PeerApi?
     var dataChannel: RTCDataChannel?
     private var peerConnection: RTCPeerConnection?
+    private var dataChannelDelegates: [RTCDataChannel: DataChannelDelegate] = [:]
+
 
     private var lastKnownReferer: String?
     private var isDeepLink: Bool = true
@@ -51,23 +53,29 @@ class SignalService {
     }
 
     // MARK: - Connect to a peer by request ID
-    func connectToPeer(requestId: String, type: String, origin: String, iceServers: [RTCIceServer]) {
-
+    func connectToPeer(
+        requestId: String,
+        type: String,
+        origin: String,
+        iceServers: [RTCIceServer],
+        onMessage: @escaping (String) -> Void,
+        onStateChange: @escaping (String?) -> Void
+    ) {
         self.currentPeerType = type
 
         signalClient?.disconnectSocket()
         signalClient = nil
-        
+
         print("Attempting to connect to peer with requestId: \(requestId), type: \(type)")
-        
+
         // Ensure the socket is connected
         signalClient = SignalClient(url: origin, service: self)
         signalClient?.connectSocket()
 
         print("ICE servers: \(iceServers)")
-        
+
         print("About to call signalClient.connectToPeer.")
-        // Use SignalClient to connect to the peer
+        // Pass the closures down to SignalClient
         let returnedDataChannel = signalClient?.connectToPeer(
             requestId: requestId,
             type: type,
@@ -75,44 +83,10 @@ class SignalService {
             onDataChannelOpen: { [weak self] dataChannel in
                 print("Data channel is open and ready: \(dataChannel.label)")
                 self?.dataChannel = dataChannel
-                self?.handleMessages(
-                    onMessage: { message in
-                        print("Received message: \(message)")
-                    },
-                    onStateChange: { state in
-                        print("Data channel state changed: \(state ?? "unknown")")
-                    }
-                )
-            }
+            },
+            onMessage: onMessage,
+            onStateChange: onStateChange
         )
-
-        if let dataChannel = returnedDataChannel {
-            print("Data channel successfully created: \(dataChannel.label)")
-            let delegate = DataChannelDelegate(
-                onMessage: { message in
-                    print("Received message: \(message)")
-                },
-                onStateChange: { [weak self] state in
-                    print("Data channel state changed: \(state ?? "unknown")")
-                    // Only set up message handlers when the channel is open
-                    if state == "open" {
-                        // Call handleMessages here
-                        self?.handleMessages(
-                            onMessage: { message in
-                                print("Received message: \(message)")
-                                // Handle incoming messages here
-                            },
-                            onStateChange: { state in
-                                print("Data channel state changed: \(state ?? "unknown")")
-                                // Handle state changes here
-                            }
-                        )
-                    }
-                }
-            )
-            dataChannel.delegate = delegate
-            self.dataChannel = dataChannel
-        }
 
         peerClient = signalClient?.peerClient
         peerConnection = peerClient?.peerConnection
@@ -124,30 +98,6 @@ class SignalService {
         }
 
         sendNotification(title: "Peer Connection", body: "Connected to peer with request ID: \(requestId).")
-    }
-
-    // MARK: - Handle incoming messages and state changes
-    func handleMessages(onMessage: @escaping (String) -> Void, onStateChange: ((String?) -> Void)? = nil) {
-        guard let dataChannel = dataChannel else {
-            print("handleMessages: Data channel is not available.")
-            return
-        }
-
-        signalClient?.handleDataChannel(dataChannel, onMessage: { message in
-            print("Received message: \(message)")
-            onMessage(message)
-
-            // Send a notification for the received message
-            self.sendNotification(title: "New Message", body: message)
-        }, onStateChange: { state in
-            print("Data channel state: \(state ?? "unknown")")
-            onStateChange?(state)
-
-            // Send a notification for state changes
-            if let state = state {
-                self.sendNotification(title: "Connection State", body: "State changed to: \(state).")
-            }
-        })
     }
 
     // MARK: - Send a message through the data channel

@@ -25,28 +25,13 @@ class SignalClient {
         setupSocketListeners()
     }
 
-    func handleDataChannel(
-        _ dataChannel: RTCDataChannel,
-        onMessage: @escaping (String) -> Void,
-        onStateChange: @escaping (String?) -> Void
-    ) {
-        let delegate = DataChannelDelegate(
-            onMessage: { message in
-                onMessage(message)
-            },
-            onStateChange: { state in
-                onStateChange(state)
-            }
-        )
-        dataChannel.delegate = delegate
-        dataChannelDelegates[dataChannel] = delegate
-    }
-
     func connectToPeer(
         requestId: String,
         type: String,
         iceServers: [RTCIceServer],
-        onDataChannelOpen: @escaping (RTCDataChannel) -> Void
+        onDataChannelOpen: @escaping (RTCDataChannel) -> Void,
+        onMessage: @escaping (String) -> Void,
+        onStateChange: @escaping (String?) -> Void
     ) -> RTCDataChannel? {
         // Clean up any existing peer connection
         peerClient?.close()
@@ -72,6 +57,7 @@ class SignalClient {
                 )
                 dataChannel.delegate = delegate
                 self?.dataChannelDelegates[dataChannel] = delegate
+                print("SignalClient: DataChannelDelegate assigned to remote data channel: \(dataChannel.label)")
             },
             onIceCandidate: { [weak self] candidate in
                 guard let self = self else { return }
@@ -100,7 +86,11 @@ class SignalClient {
                 return nil
             }
 
-            let dataChannel = peerClient.createDataChannel(label: "liquid")
+            let dataChannel = peerClient.createDataChannel(
+                label: "liquid",
+                onMessage: onMessage,
+                onStateChange: onStateChange
+            )
 
             peerClient.createOffer { offer in
                 guard let offer = offer else {

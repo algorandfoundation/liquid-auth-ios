@@ -7,6 +7,8 @@ class PeerApi {
     private var peerConnectionDelegate: PeerConnectionDelegate?
     private var dataChannel: RTCDataChannel?
     private let onDataChannel: (RTCDataChannel) -> Void
+    private var dataChannelDelegates: [RTCDataChannel: DataChannelDelegate] = [:] // Add this
+
 
     init(
         iceServers: [RTCIceServer],
@@ -143,21 +145,23 @@ class PeerApi {
     }
 
     // Create a Data Channel
-    func createDataChannel(label: String) -> RTCDataChannel? {
+    func createDataChannel(
+        label: String,
+        onMessage: @escaping (String) -> Void,
+        onStateChange: @escaping (String?) -> Void
+    ) -> RTCDataChannel? {
         let config = RTCDataChannelConfiguration()
         print("PeerAPI: Creating data channel with label: \(label)")
         self.dataChannel = peerConnection?.dataChannel(forLabel: label, configuration: config)
 
         if let dataChannel = self.dataChannel {
             let delegate = DataChannelDelegate(
-                onMessage: { message in
-                    print("PeerAPI: Received message: \(message)")
-                },
-                onStateChange: { state in
-                    print("PeerAPI: Data channel state changed: \(state ?? "unknown")")
-                }
+                onMessage: onMessage,
+                onStateChange: onStateChange
             )
             dataChannel.delegate = delegate
+            dataChannelDelegates[dataChannel] = delegate
+            print("PeerApi: DataChannelDelegate assigned to data channel: \(dataChannel.label)")
         }
 
         return self.dataChannel

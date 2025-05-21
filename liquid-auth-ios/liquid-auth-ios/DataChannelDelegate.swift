@@ -15,8 +15,14 @@ class DataChannelDelegate: NSObject, RTCDataChannelDelegate {
         self.onBufferedAmountChange = onBufferedAmountChange
     }
 
+    deinit {
+        print("DataChannelDelegate deinitialized!")
+    }
+
     func dataChannel(_ dataChannel: RTCDataChannel, didReceiveMessageWith buffer: RTCDataBuffer) {
+        print("DataChannelDelegate: didReceiveMessageWith called")
         if let message = String(data: buffer.data, encoding: .utf8) {
+            print("DataChannelDelegate: Received message: \(message)")
             onMessage(message)
         }
     }
@@ -27,7 +33,7 @@ class DataChannelDelegate: NSObject, RTCDataChannelDelegate {
 
     func dataChannelDidChangeState(_ dataChannel: RTCDataChannel) {
         let state = dataChannel.readyState.description
-        print("Data channel state changed to: \(state)")
+        print("DataChannelDelegate: Data channel state changed to: \(state)")
         onStateChange(state)
     }
 }

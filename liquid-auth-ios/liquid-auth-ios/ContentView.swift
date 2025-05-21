@@ -407,24 +407,32 @@ struct ContentView: View {
             RTCIceServer(urlStrings: ["stun:stun1.l.google.com:19302"]),
             RTCIceServer(urlStrings: ["stun:stun2.l.google.com:19302"]),
             RTCIceServer(urlStrings: ["turn:global.turn.nodely.network:80"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
-            RTCIceServer(urlStrings: ["turns:global.turn.nodely.network:443"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
-            RTCIceServer(urlStrings: ["turn:eu.turn.nodely.io:80"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
-            RTCIceServer(urlStrings: ["turns:eu.turn.nodely.io:443"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
-            RTCIceServer(urlStrings: ["turn:us.turn.nodely.io:80"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
-            RTCIceServer(urlStrings: ["turns:us.turn.nodely.io:443"],  username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
+            // RTCIceServer(urlStrings: ["turns:global.turn.nodely.network:443"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
+            // RTCIceServer(urlStrings: ["turn:eu.turn.nodely.io:80"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
+            // RTCIceServer(urlStrings: ["turns:eu.turn.nodely.io:443"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
+            // RTCIceServer(urlStrings: ["turn:us.turn.nodely.io:80"], username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
+            // RTCIceServer(urlStrings: ["turns:us.turn.nodely.io:443"],  username: "liquid-auth", credential: "sqmcP4MiTKMT4TGEDSk9jgHY"),
         ]
         
         Task {
-            signalService.connectToPeer(requestId: requestId, type: "answer", origin: origin, iceServers: iceServers)
+            signalService.connectToPeer(
+                requestId: requestId,
+                type: "answer",
+                origin: origin,
+                iceServers: iceServers,
+                onMessage: { message in
+                    print("Received message: \(message)")
+                    // Handle incoming messages here
+                },
+                onStateChange: { state in
+                    print("Data channel state changed: \(state ?? "unknown")")
+                    // Handle state changes here
+                    if state == "open" {
+                        SignalService.shared.sendMessage("test")
+                    }
+                }
+            )
             print("after signalService.connectToPeer")
-            // Set up message handling - similar to handleMessages in Kotlin
-            signalService.handleMessages(onMessage: { message in
-                print("Received message: \(message)")
-                // Handle incoming messages here
-            }, onStateChange: { state in
-                print("Data channel state changed: \(state ?? "unknown")")
-                // Handle state changes here
-            })
         }
     }
 
