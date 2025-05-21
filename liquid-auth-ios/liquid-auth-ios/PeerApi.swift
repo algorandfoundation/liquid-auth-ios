@@ -4,6 +4,7 @@ import WebRTC
 class PeerApi {
     private let peerConnectionFactory: RTCPeerConnectionFactory
     var peerConnection: RTCPeerConnection?
+    private var peerConnectionDelegate: PeerConnectionDelegate?
     private var dataChannel: RTCDataChannel?
     private let onDataChannel: (RTCDataChannel) -> Void
 
@@ -23,12 +24,7 @@ class PeerApi {
         configuration.iceServers = iceServers
         configuration.iceCandidatePoolSize = Int32(poolSize)
 
-        // Create the PeerConnection
-        let constraints = RTCMediaConstraints(mandatoryConstraints: ["OfferToReceiveAudio": "false", "OfferToReceiveVideo": "false"], optionalConstraints: nil)
-        self.peerConnection = peerConnectionFactory.peerConnection(
-            with: configuration,
-            constraints: constraints,
-            delegate: PeerConnectionDelegate(
+        let delegate = PeerConnectionDelegate(
                 onIceCandidate: onIceCandidate,
                 onDataChannel: onDataChannel,
                 onConnectionStateChange: { state in
@@ -43,7 +39,17 @@ class PeerApi {
                         }
                     }
                 }
-            ))
+            )
+
+        // Create the PeerConnection
+        let constraints = RTCMediaConstraints(mandatoryConstraints: ["OfferToReceiveAudio": "false", "OfferToReceiveVideo": "false"], optionalConstraints: nil)
+        
+        self.peerConnectionDelegate = delegate
+        self.peerConnection = peerConnectionFactory.peerConnection(
+            with: configuration,
+            constraints: constraints,
+            delegate: delegate
+        )
     }
 
     // Create a new Peer Connection
