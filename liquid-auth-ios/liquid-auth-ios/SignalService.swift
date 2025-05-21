@@ -70,7 +70,7 @@ class SignalService {
         signalClient?.onSocketConnected = { [weak self] in
             guard let self = self else { return }
             print("Socket connected, now starting WebRTC signaling.")
-            let returnedDataChannel = self.signalClient?.connectToPeer(
+            _ = self.signalClient?.connectToPeer(
                 requestId: requestId,
                 type: type,
                 iceServers: iceServers,

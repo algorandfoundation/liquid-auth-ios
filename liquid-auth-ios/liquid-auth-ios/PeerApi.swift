@@ -25,6 +25,8 @@ class PeerApi {
         let configuration = RTCConfiguration()
         configuration.iceServers = iceServers
         configuration.iceCandidatePoolSize = Int32(poolSize)
+        configuration.sdpSemantics = .unifiedPlan
+        configuration.continualGatheringPolicy = .gatherContinually
 
         let delegate = PeerConnectionDelegate(
                 onIceCandidate: onIceCandidate,
@@ -44,8 +46,11 @@ class PeerApi {
             )
 
         // Create the PeerConnection
-        let constraints = RTCMediaConstraints(mandatoryConstraints: ["OfferToReceiveAudio": "false", "OfferToReceiveVideo": "false"], optionalConstraints: nil)
-        
+        let constraints = RTCMediaConstraints(
+            mandatoryConstraints: ["OfferToReceiveAudio": "false", "OfferToReceiveVideo": "false"],
+            optionalConstraints: ["DtlsSrtpKeyAgreement": "true"]
+        )
+
         self.peerConnectionDelegate = delegate
         self.peerConnection = peerConnectionFactory.peerConnection(
             with: configuration,
@@ -63,8 +68,13 @@ class PeerApi {
     ) {
         let configuration = RTCConfiguration()
         configuration.iceServers = iceServers
+        configuration.sdpSemantics = .unifiedPlan
+        configuration.continualGatheringPolicy = .gatherContinually
 
-        let constraints = RTCMediaConstraints(mandatoryConstraints: ["OfferToReceiveAudio": "false", "OfferToReceiveVideo": "false"], optionalConstraints: nil)
+        let constraints = RTCMediaConstraints(
+            mandatoryConstraints: ["OfferToReceiveAudio": "false", "OfferToReceiveVideo": "false"],
+            optionalConstraints: ["DtlsSrtpKeyAgreement": "true"]
+        )
         peerConnection = peerConnectionFactory.peerConnection(with: configuration, constraints: constraints, delegate: PeerConnectionDelegate(
             onIceCandidate: onIceCandidate,
             onDataChannel: onDataChannel,
@@ -118,7 +128,7 @@ class PeerApi {
             completion(nil)
             return
         }
-        peerConnection.offer(for: RTCMediaConstraints(mandatoryConstraints: ["OfferToReceiveAudio": "false", "OfferToReceiveVideo": "false"], optionalConstraints: nil)) { sdp, error in
+        peerConnection.offer(for: RTCMediaConstraints(mandatoryConstraints: ["OfferToReceiveAudio": "false", "OfferToReceiveVideo": "false"], optionalConstraints: ["DtlsSrtpKeyAgreement": "true"])) { sdp, error in
             if let error = error {
                 print("PeerAPI: Failed to create offer: \(error)")
                 completion(nil)
@@ -134,7 +144,7 @@ class PeerApi {
             print("PeerAPI: PeerConnection is null, ensure you are connected")
             return
         }
-        peerConnection.answer(for: RTCMediaConstraints(mandatoryConstraints: ["OfferToReceiveAudio": "false", "OfferToReceiveVideo": "false"], optionalConstraints: nil)) { sdp, error in
+        peerConnection.answer(for: RTCMediaConstraints(mandatoryConstraints: ["OfferToReceiveAudio": "false", "OfferToReceiveVideo": "false"], optionalConstraints: ["DtlsSrtpKeyAgreement": "true"])) { sdp, error in
             if let error = error {
                 print("PeerAPI: Failed to create answer: \(error)")
                 completion(nil)
