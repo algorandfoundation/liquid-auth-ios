@@ -14,7 +14,10 @@ class AttestationApi {
      * @param origin - Base URL for the service
      * @param userAgent - User Agent for FIDO Server parsing
      * @param options - PublicKeyCredentialCreationOptions in JSON
+<<<<<<< HEAD
      * @return A tuple containing the response data and an optional session cookie
+=======
+>>>>>>> main
      */
     func postAttestationOptions(
         origin: String,

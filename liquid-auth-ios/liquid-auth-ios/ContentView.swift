@@ -226,6 +226,21 @@ struct ContentView: View {
                 showActionSheet = true
                 }
             }
+            .padding()
+
+            // Show a loading overlay when isLoading is true
+            if isLoading {
+                VStack {
+                    ProgressView("Processing...")
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(10)
+                        .shadow(radius: 10)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black.opacity(0.5))
+                .edgesIgnoringSafeArea(.all)
+            }
         }
 
     private func startProcessing(action: @escaping () -> Void) {
