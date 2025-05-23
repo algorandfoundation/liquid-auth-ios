@@ -12,7 +12,7 @@ struct Utility {
               let host = url.host,
               let queryItems = URLComponents(string: uri)?.queryItems,
               let requestId = queryItems.first(where: { $0.name == "requestId" })?.value else {
-            print("Invalid Liquid Auth URI format.")
+            Logger.error("Invalid Liquid Auth URI format.")
             return nil
         }
         return (origin: host, requestId: requestId)

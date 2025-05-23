@@ -61,7 +61,7 @@ class SignalService {
         signalClient?.disconnectSocket()
         signalClient = nil
 
-        print("Attempting to connect to peer with requestId: \(requestId), type: \(type)")
+        Logger.debug("Attempting to connect to peer with requestId: \(requestId), type: \(type)")
 
         // Ensure the socket is connected
         signalClient = SignalClient(url: origin, service: self)
@@ -69,14 +69,14 @@ class SignalService {
         // Wait for socket connection before starting signaling
         signalClient?.onSocketConnected = { [weak self] in
             guard let self = self else { return }
-            print("Socket connected, now starting WebRTC signaling.")
+            Logger.debug("Socket connected, now starting WebRTC signaling.")
             _ = self.signalClient?.connectToPeer(
                 requestId: requestId,
                 type: type,
                 iceServers: iceServers,
                 onDataChannelOpen: { [weak self] dataChannel in
-                    print("Data channel is open and ready: \(dataChannel.label)")
                     self?.dataChannel = dataChannel
+                    Logger.debug("Data channel is open and ready: \(dataChannel.label)")
                 },
                 onMessage: onMessage,
                 onStateChange: onStateChange
@@ -86,30 +86,30 @@ class SignalService {
             self.peerConnection = self.peerClient?.peerConnection
 
             if let peerConnection = self.peerConnection {
-                print("Peer connection state: \(peerConnection.connectionState.rawValue)")
+                Logger.debug("Peer connection state: \(peerConnection.connectionState.rawValue)")
             } else {
-                print("Peer connection is nil.")
+                Logger.error("Peer connection is nil.")
             }
 
             self.sendNotification(title: "Peer Connection", body: "Connected to peer with request ID: \(requestId).")
         }
 
         signalClient?.connectSocket()
-        print("ICE servers: \(iceServers)")
-        print("Waiting for socket to connect before signaling.")
+        Logger.debug("ICE servers: \(iceServers)")
+        Logger.debug("Waiting for socket to connect before signaling.")
     }
 
     // MARK: - Send a message through the data channel
     func sendMessage(_ message: String) {
         guard let dataChannel = dataChannel else {
-            print("sendMessage: Data channel is not available.")
+            Logger.error("sendMessage: Data channel is not available.")
             return
         }
 
         let buffer = RTCDataBuffer(data: message.data(using: .utf8)!, isBinary: false)
         dataChannel.sendData(buffer)
 
-        print("Message sent: \(message)")
+        Logger.info("Message sent: \(message)")
     }
 
     // MARK: - Send a notification
@@ -122,7 +122,7 @@ class SignalService {
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print("Failed to send notification: \(error)")
+                Logger.error("Failed to send notification: \(error)")
             }
         }
     }

@@ -85,7 +85,7 @@ class AttestationApi {
         // Add device information
         payload["device"] = await UIDevice.current.model
 
-        print("The full payload: \(payload)")
+        Logger.debug("PostAttestationResult: The full payload: \(payload)")
 
         // Serialize the payload into JSON
         guard let body = try? JSONSerialization.data(withJSONObject: payload, options: []) else {

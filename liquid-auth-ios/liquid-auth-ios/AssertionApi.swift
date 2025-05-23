@@ -88,8 +88,6 @@ class AssertionApi {
             var payload = try? JSONSerialization.jsonObject(with: credentialData, options: []) as? [String: Any] else {
           throw NSError(domain: "Invalid Credential JSON", code: -1, userInfo: nil)
       }
-      
-      print("sending payload: \(payload)")
 
       // Add Liquid extension data if provided
       if let liquidExt = liquidExt {

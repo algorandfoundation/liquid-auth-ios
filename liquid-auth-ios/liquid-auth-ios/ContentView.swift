@@ -7,6 +7,8 @@ import CryptoKit
 import deterministicP256_swift
 import WebRTC
 
+import Foundation
+
 
 struct ContentView: View {
     @State private var isScanning = false
@@ -165,17 +167,17 @@ struct ContentView: View {
                 scannedMessage = "\(fidoRequest.flowType) flow detected. Ready to proceed."
 
                 // Log the extracted fields
-                print("Public Key: \(fidoRequest.publicKey)")
-                print("QR Secret: \(fidoRequest.qrSecret)")
-                print("Tunnel Server Count: \(fidoRequest.tunnelServerCount)")
+                Logger.debug("Public Key: \(fidoRequest.publicKey)")
+                Logger.debug("QR Secret: \(fidoRequest.qrSecret)")
+                Logger.debug("Tunnel Server Count: \(fidoRequest.tunnelServerCount)")
                 if let currentTime = fidoRequest.currentTime {
-                    print("Current Time: \(currentTime)")
+                    Logger.debug("Current Time: \(currentTime)")
                 }
                 if let stateAssisted = fidoRequest.stateAssisted {
-                    print("State-Assisted Transactions: \(stateAssisted)")
+                    Logger.debug("State-Assisted Transactions: \(stateAssisted)")
                 }
                 if let hint = fidoRequest.hint {
-                    print("Hint: \(hint)")
+                    Logger.debug("Hint: \(hint)")
                 }
 
                 errorMessage = nil
@@ -189,6 +191,7 @@ struct ContentView: View {
             isLoading = true
             handleLiquidAuthURI(code)
         } else {
+            Logger.error("Unsupported QR code format: \(code)")
             errorMessage = "Unsupported QR code format."
             scannedMessage = nil
         }
@@ -199,17 +202,17 @@ struct ContentView: View {
             // Update the UI to show the scanned message
             scannedMessage = "Liquid Auth URI: \(uri)"
             errorMessage = nil
-            print("Handling Liquid Auth URI: \(uri)")
+            Logger.debug("Handling Liquid Auth URI: \(uri)")
 
             // Extract origin and request ID from the URI
             guard let (origin, requestId) = Utility.extractOriginAndRequestId(from: uri) else {
-                print("Failed to extract origin and request ID.")
+                Logger.error("Failed to extract origin and request ID.")
                 errorMessage = "Invalid Liquid Auth URI."
                 isLoading = false
                 return
             }
 
-            print("Origin: \(origin), Request ID: \(requestId)")
+            Logger.debug("Origin: \(origin), Request ID: \(requestId)")
 
 
             // Prompt the user to choose between registration and authentication
@@ -262,9 +265,9 @@ struct ContentView: View {
 
             // Post attestation options
             let (data, sessionCookie) = try await attestationApi.postAttestationOptions(origin: origin, userAgent: userAgent, options: options)
-            print("Response data: \(String(data: data, encoding: .utf8) ?? "Invalid data")")
+            Logger.debug("Response data: \(String(data: data, encoding: .utf8) ?? "Invalid data")")
             if let cookie = sessionCookie {
-                print("Session cookie: \(cookie)")
+                Logger.debug("Session cookie: \(cookie)")
             }
 
             guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
@@ -272,9 +275,9 @@ struct ContentView: View {
                 throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse response JSON or find the challenge field."])
             }
 
-            print("Challenge (Base64): \(challengeBase64Url)")
-            print("Challenge Decoded: \([UInt8](Utility.decodeBase64Url(challengeBase64Url)!))")
-            print("Challenge JSON: \(Utility.decodeBase64UrlToJSON(challengeBase64Url) ?? "nil")")
+            Logger.debug("Challenge (Base64): \(challengeBase64Url)")
+            Logger.debug("Challenge Decoded: \([UInt8](Utility.decodeBase64Url(challengeBase64Url)!))")
+            Logger.debug("Challenge JSON: \(Utility.decodeBase64UrlToJSON(challengeBase64Url) ?? "nil")")
 
             // Validate and sign the challenge
             let schema = try Schema(filePath: Bundle.main.path(forResource: "auth.request", ofType: "json")!)
@@ -292,8 +295,8 @@ struct ContentView: View {
                 throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create signature"])
             }
 
-            print("Signature: \(sig.base64URLEncodedString())")
-            print("Signature Length (Raw Bytes): \(sig.count)")
+            Logger.debug("Signature: \(sig.base64URLEncodedString())")
+            Logger.debug("Signature Length (Raw Bytes): \(sig.count)")
 
             // Create the Liquid extension JSON object
             let liquidExt = createLiquidExt(
@@ -301,11 +304,11 @@ struct ContentView: View {
                 address: address,
                 signature: sig.base64URLEncodedString()
             )
-            print("Created liquidExt JSON object: \(liquidExt)")
+            Logger.debug("Created liquidExt JSON object: \(liquidExt)")
 
             // Deterministic ID - derived from P256 Public Key
             let rawId = Data([UInt8](Utility.hashSHA256(P256KeyPair.publicKey.rawRepresentation)))
-            print("Created rawId: \(rawId.map { String(format: "%02hhx", $0) }.joined())")
+            Logger.debug("Created rawId: \(rawId.map { String(format: "%02hhx", $0) }.joined())")
 
             // Create clientDataJSON
             let clientData: [String: Any] = [
@@ -320,11 +323,11 @@ struct ContentView: View {
             }
 
             let clientDataJSONBase64Url = clientDataJSONData.base64URLEncodedString()
-            print("Created clientDataJSON: \(clientDataJSONBase64Url)")
+            Logger.debug("Created clientDataJSON: \(clientDataJSONBase64Url)")
 
             // Create attestationObject
             let attestedCredData = Utility.getAttestedCredentialData(aaguid: UUID(uuidString: "5c7b7e9a-2b85-464e-9ea3-529582bb7e34")!, credentialId: rawId, publicKey: P256KeyPair.publicKey.rawRepresentation)
-            print("created attestedCredData: \(attestedCredData.count)")
+            Logger.debug("created attestedCredData: \(attestedCredData.count)")
 
             let rpIdHash = Utility.hashSHA256(origin.data(using: .utf8)!)
             let authData = AttestationAuthData(
@@ -335,7 +338,7 @@ struct ContentView: View {
                 attestedCredData,
                 nil
             )
-            print("created authData: \(authData)")
+            Logger.debug("created authData: \(authData)")
 
             let attObj: [String: Any] = [
                 "fmt": "none",
@@ -345,7 +348,7 @@ struct ContentView: View {
 
             let cborEncoded = try CBOR.encodeMap(attObj)
             let attestationObject = Data(cborEncoded)
-            print("Created attestationobject: \(attestationObject.base64URLEncodedString())")
+            Logger.debug("Created attestationobject: \(attestationObject.base64URLEncodedString())")
 
             let credential: [String: Any] = [
                 "id": rawId.base64URLEncodedString(),
@@ -356,7 +359,7 @@ struct ContentView: View {
                     "attestationObject": attestationObject.base64URLEncodedString()
                 ]
             ]
-            print("Created credential: \(credential)")
+            Logger.debug("Created credential: \(credential)")
 
             // Post attestation result
             let responseData = try await attestationApi.postAttestationResult(
@@ -368,12 +371,13 @@ struct ContentView: View {
 
             // Handle the server response
             let responseString = String(data: responseData, encoding: .utf8) ?? "Invalid response"
-            print("Attestation result posted: \(responseString)")
+            Logger.info("Attestation result posted: \(responseString)")
 
             // Parse the response to check for errors
             if let responseJSON = try? JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any],
             let errorReason = responseJSON["error"] as? String {
                 // If an error exists, propagate it
+                Logger.error("Registration failed: \(errorReason)")
                 errorMessage = "Registration failed: \(errorReason)"
                 scannedMessage = nil
             } else {
@@ -385,7 +389,7 @@ struct ContentView: View {
             }
 
         } catch {
-            print("Error in register: \(error)")
+            Logger.error("Error in register: \(error)")
             errorMessage = "Failed to handle Liquid Auth URI Registration flow: \(error.localizedDescription)"
         }
     }
@@ -427,7 +431,7 @@ struct ContentView: View {
 
             // Handle the response
             if let sessionCookie = sessionCookie {
-                print("Session cookie: \(sessionCookie)")
+                Logger.debug("Session cookie: \(sessionCookie)")
                 // Store or use the session cookie as needed
             }
 
@@ -439,11 +443,11 @@ struct ContentView: View {
                 throw NSError(domain: "Missing required fields in response", code: -1, userInfo: nil)
             }
             
-            print("Response: \(String(describing: String(data: data, encoding: .utf8)))")
+            Logger.debug("Response: \(String(describing: String(data: data, encoding: .utf8)))")
 
-            print("Challenge (Base64): \(challengeBase64Url)")
-            print("Challenge Decoded: \([UInt8](Utility.decodeBase64Url(challengeBase64Url)!))")
-            print("Challenge JSON: \(Utility.decodeBase64UrlToJSON(challengeBase64Url) ?? "nil")")
+            Logger.debug("Challenge (Base64): \(challengeBase64Url)")
+            Logger.debug("Challenge Decoded: \([UInt8](Utility.decodeBase64Url(challengeBase64Url)!))")
+            Logger.debug("Challenge JSON: \(Utility.decodeBase64UrlToJSON(challengeBase64Url) ?? "nil")")
 
             // Validate and sign the challenge
             let schema = try Schema(filePath: Bundle.main.path(forResource: "auth.request", ofType: "json")!)
@@ -461,8 +465,8 @@ struct ContentView: View {
                 throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create signature"])
             }
 
-            print("Signature: \(sig.base64URLEncodedString())")
-            print("Signature Length (Raw Bytes): \(sig.count)")
+            Logger.debug("Signature: \(sig.base64URLEncodedString())")
+            Logger.debug("Signature Length (Raw Bytes): \(sig.count)")
             
             // Create the Liquid extension JSON object
             let liquidExt = createLiquidExt(
@@ -470,7 +474,7 @@ struct ContentView: View {
                 address: address,
                 signature: sig.base64URLEncodedString()
             )
-            print("Created liquidExt JSON object: \(liquidExt)")
+            Logger.debug("Created liquidExt JSON object: \(liquidExt)")
 
             // Create clientDataJSON
             let clientData: [String: Any] = [
@@ -486,7 +490,7 @@ struct ContentView: View {
             }
 
             let clientDataJSONBase64Url = clientDataJSONData.base64URLEncodedString()
-            print("Created clientDataJSON: \(clientDataJSONBase64Url)")
+            Logger.debug("Created clientDataJSON: \(clientDataJSONBase64Url)")
 
             let rpIdHash = Utility.hashSHA256(origin.data(using: .utf8)!)
             let authenticatorData = AssertionAuthData(
@@ -515,7 +519,7 @@ struct ContentView: View {
                 ]
             ]
 
-            print("Created assertion response: \(assertionResponse)")
+            Logger.debug("Created assertion response: \(assertionResponse)")
 
             // Serialize the assertion response into a JSON string
             guard let assertionResponseData = try? JSONSerialization.data(withJSONObject: assertionResponse, options: []),
@@ -533,12 +537,13 @@ struct ContentView: View {
 
             // Handle the server response
             let responseString = String(data: responseData, encoding: .utf8) ?? "Invalid response"
-            print("Assertion result posted: \(responseString)")
+            Logger.info("Assertion result posted: \(responseString)")
 
             // Parse the response to check for errors
             if let responseJSON = try? JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any],
             let errorReason = responseJSON["error"] as? String {
                 // If an error exists, propagate it
+                Logger.error("Authentication failed: \(errorReason)")
                 errorMessage = "Authentication failed: \(errorReason)"
                 scannedMessage = nil
             } else {
@@ -551,7 +556,7 @@ struct ContentView: View {
 
         // Next step
         } catch {
-            print("Error in authenticate: \(error)")
+            Logger.error("Error in authenticate: \(error)")
             errorMessage = "Failed to retrieve authentication options: \(error.localizedDescription)"
         }
     }
@@ -583,18 +588,15 @@ struct ContentView: View {
                 origin: origin,
                 iceServers: iceServers,
                 onMessage: { message in
-                    print("ContentView: Received message: \(message)")
+                    Logger.info("💬 Received message: \(message)")
                     // Handle incoming messages here
                 },
                 onStateChange: { state in
-                    print("ContentView: Data channel state changed: \(state ?? "unknown")")
-                    // Handle state changes here
                     if state == "open" {
-                        SignalService.shared.sendMessage("test")
+                        Logger.info("✅ Data channel is OPEN")
                     }
                 }
             )
-            print("after signalService.connectToPeer")
         }
     }
 
