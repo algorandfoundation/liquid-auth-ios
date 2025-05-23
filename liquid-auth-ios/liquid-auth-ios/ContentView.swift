@@ -5,7 +5,9 @@ import x_hd_wallet_api
 import MnemonicSwift
 import CryptoKit
 import deterministicP256_swift
+import WebRTC
 
+import Foundation
 
 struct ContentView: View {
     @State private var isScanning = false
@@ -13,49 +15,69 @@ struct ContentView: View {
     @State private var scannedMessage: String? = nil
     @State private var errorMessage: String? = nil
 
+    @State private var showActionSheet = false
+    @State private var actionSheetOrigin: String?
+    @State private var actionSheetRequestId: String?
+
     var body: some View {
         ZStack {
-            VStack {
-                Image(systemName: "globe")
-                    .imageScale(.large)
-                    .foregroundStyle(.tint)
-                Text("Ready to scan?")
-                
-                Button(action: {
-                    isScanning = true
-                }) {
-                    Text("Scan QR Code")
+            NavigationStack {
+                VStack {
+                    Image(systemName: "globe")
+                        .imageScale(.large)
+                        .foregroundStyle(.tint)
+                    Text("Ready to scan?")
+                    
+                    Button(action: {
+                        isScanning = true
+                    }) {
+                        Text("Scan QR Code")
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+                    .navigationDestination(isPresented: $isScanning) {
+                        QRCodeScannerView { scannedCode in
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                handleScannedCode(scannedCode)
+                            }
+                        }
+                    }
+
+                    if let message = scannedMessage {
+                        ScrollView {
+                            Text("Message: \(message)")
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .frame(maxHeight: 300) 
                         .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                }
-                .sheet(isPresented: $isScanning) {
-                    QRCodeScannerView { scannedCode in
-                        isScanning = false // Dismiss the camera view immediately
-                        handleScannedCode(scannedCode)
+                    }
+
+                    if let error = errorMessage {
+                        Text("Error: \(error)")
+                            .foregroundColor(.red)
+                            .padding()
                     }
                 }
-
-                if let message = scannedMessage {
-                    Text("Message: \(message)")
-                        .padding()
+                .padding()
+                .actionSheet(isPresented: $showActionSheet) {
+                    actionSheet
                 }
-
-                if let error = errorMessage {
-                    Text("Error: \(error)")
-                        .foregroundColor(.red)
-                        .padding()
+                .navigationTitle("Liquid Auth")
+                .onDisappear {
+                    // Reset state when navigating back
+                    resetState()
                 }
             }
-            .padding()
 
-            // Show a loading overlay when isLoading is true
+            // Show the processing pop-up only when isLoading is true
             if isLoading {
                 VStack {
                     ProgressView("Processing...")
                         .padding()
-                        .background(Color.white)
+                        .background(Color.black)
                         .cornerRadius(10)
                         .shadow(radius: 10)
                 }
@@ -66,8 +88,53 @@ struct ContentView: View {
         }
     }
 
+    private var actionSheet: ActionSheet {
+        ActionSheet(
+            title: Text("Choose Action"),
+            message: Text("Would you like to register or authenticate?"),
+            buttons: [
+                .default(Text("Register")) {
+                    startProcessing {
+                        Task {
+                            if let origin = actionSheetOrigin, let requestId = actionSheetRequestId {
+                                await register(origin: origin, requestId: requestId)
+                            }
+                        }
+                    }
+                },
+                .default(Text("Authenticate")) {
+                    startProcessing {
+                        Task {
+                            if let origin = actionSheetOrigin, let requestId = actionSheetRequestId {
+                                await authenticate(origin: origin, requestId: requestId)
+                            }
+                        }
+                    }
+                },
+                .cancel {
+                    resetState() // Reset state when "Cancel" is pressed
+                }
+            ]
+        )
+    }
+
+    private func resetState() {
+        // Reset all states
+        isLoading = false
+        scannedMessage = nil
+        errorMessage = nil
+        showActionSheet = false
+        actionSheetOrigin = nil
+        actionSheetRequestId = nil
+    }
+
 
     private func handleScannedCode(_ code: String) {
+
+        isScanning = false // Dismiss the QR code scanner
+        isLoading = false // Ensure progress bar is hidden
+        showActionSheet = false // Ensure action sheet is hidden
+
         if code.starts(with: "FIDO:/") {
             // Decode the FIDO URI
 
@@ -93,7 +160,7 @@ struct ContentView: View {
                         errorMessage = "Failed to open URI: \(code)"
                         scannedMessage = nil
                     }
-                } 
+                }
             */
 
 
@@ -104,17 +171,17 @@ struct ContentView: View {
                 scannedMessage = "\(fidoRequest.flowType) flow detected. Ready to proceed."
 
                 // Log the extracted fields
-                print("Public Key: \(fidoRequest.publicKey)")
-                print("QR Secret: \(fidoRequest.qrSecret)")
-                print("Tunnel Server Count: \(fidoRequest.tunnelServerCount)")
+                Logger.debug("Public Key: \(fidoRequest.publicKey)")
+                Logger.debug("QR Secret: \(fidoRequest.qrSecret)")
+                Logger.debug("Tunnel Server Count: \(fidoRequest.tunnelServerCount)")
                 if let currentTime = fidoRequest.currentTime {
-                    print("Current Time: \(currentTime)")
+                    Logger.debug("Current Time: \(currentTime)")
                 }
                 if let stateAssisted = fidoRequest.stateAssisted {
-                    print("State-Assisted Transactions: \(stateAssisted)")
+                    Logger.debug("State-Assisted Transactions: \(stateAssisted)")
                 }
                 if let hint = fidoRequest.hint {
-                    print("Hint: \(hint)")
+                    Logger.debug("Hint: \(hint)")
                 }
 
                 errorMessage = nil
@@ -128,62 +195,75 @@ struct ContentView: View {
             isLoading = true
             handleLiquidAuthURI(code)
         } else {
+            Logger.error("Unsupported QR code format: \(code)")
             errorMessage = "Unsupported QR code format."
             scannedMessage = nil
         }
     }
 
     private func handleLiquidAuthURI(_ uri: String) {
-        // Example: Decode the Liquid Auth URI
-        scannedMessage = "Liquid Auth URI: \(uri)"
-        errorMessage = nil
-        // Add logic to decode and process the Liquid Auth message
-        print("Handling Liquid Auth URI: \(uri)")
+        Task {
+            // Update the UI to show the scanned message
+            scannedMessage = "Liquid Auth URI: \(uri)"
+            errorMessage = nil
+            Logger.debug("Handling Liquid Auth URI: \(uri)")
 
-        if let (origin, requestId) = Utility.extractOriginAndRequestId(from: uri) {
-            print("Origin: \(origin), Request ID: \(requestId)")
+            // Extract origin and request ID from the URI
+            guard let (origin, requestId) = Utility.extractOriginAndRequestId(from: uri) else {
+                Logger.error("Failed to extract origin and request ID.")
+                errorMessage = "Invalid Liquid Auth URI."
+                isLoading = false
+                return
+            }
 
-            // TODO: check if credential for the specific origin already exists
-            // For now, only register:
+            Logger.debug("Origin: \(origin), Request ID: \(requestId)")
 
-            if (true) {
-                DispatchQueue.global().async {
-                    register(origin: origin, requestId: requestId)
-                    DispatchQueue.main.async {
-                        isLoading = false // Stop loading
-                    }
+
+            // Prompt the user to choose between registration and authentication
+            DispatchQueue.main.async {
+                actionSheetOrigin = origin
+                actionSheetRequestId = requestId
+                showActionSheet = true
                 }
             }
-            // TODO: If yes, authenticate with the credential
-            
-        } else {
-            print("Failed to extract origin and request ID.")
-            isLoading = false
+            .padding()
+
+            // Show a loading overlay when isLoading is true
+            if isLoading {
+                VStack {
+                    ProgressView("Processing...")
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(10)
+                        .shadow(radius: 10)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black.opacity(0.5))
+                .edgesIgnoringSafeArea(.all)
+            }
+        }
+
+    private func startProcessing(action: @escaping () -> Void) {
+        // Ensure the progress bar only shows after the action sheet is dismissed
+        showActionSheet = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            isLoading = true
+            action()
         }
     }
 
-    private func register(origin: String, requestId: String) {
-
+    private func register(origin: String, requestId: String) async {
         do {
-            // Get the appropriate Algorand Address
-            let phrase = "salon zoo engage submit smile frost later decide wing sight chaos renew lizard rely canal coral scene hobby scare step bus leaf tobacco slice"
-            
-            let seed = try Mnemonic.deterministicSeedString(from: phrase)
-            
-            let Ed25519Wallet = XHDWalletAPI(seed: seed)
-            
-            let DP256 = DeterministicP256()
-            let derivedMainKey = try DP256.genDerivedMainKeyWithBIP39(phrase: phrase)
-            let P256KeyPair = DP256.genDomainSpecificKeyPair(derivedMainKey: derivedMainKey, origin: "https://\(origin)", userHandle: "tester")
-
-            
-            guard let pk = try Ed25519Wallet?.keyGen(context: KeyContext.Address, account: 0, change: 0, keyIndex: 0) else {
-                throw NSError(domain: "Key generation failed", code: -1, userInfo: nil)
+            defer { 
+                isLoading = false
             }
-            
-            
-            
-            let address = try Utility.encodeAddress(bytes: pk)
+
+            let walletInfo = try getWalletInfo(origin: origin)
+            let Ed25519Wallet = walletInfo.ed25519Wallet
+            let DP256 = walletInfo.dp256
+            let derivedMainKey = walletInfo.derivedMainKey
+            let P256KeyPair = walletInfo.p256KeyPair
+            let address = walletInfo.address
 
             let attestationApi = AttestationApi()
 
@@ -196,184 +276,387 @@ struct ContentView: View {
 
             let userAgent = Utility.getUserAgent()
 
-            attestationApi.postAttestationOptions(origin: origin, userAgent: userAgent, options: options, completion: { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success(let (data, sessionCookie)):
-                        print("Response data: \(String(data: data, encoding: .utf8) ?? "Invalid data")")
-                        if let cookie = sessionCookie {
-                            print("Session cookie: \(cookie)")
-                        }
-
-                        if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                        let challengeBase64Url = json["challenge"] as? String {
-                            print("Challenge (Base64): \(challengeBase64Url)")
-                            print("Challenge Decoded: \([UInt8](Utility.decodeBase64Url(challengeBase64Url)!))")
-                            print("Challenge JSON: \(Utility.decodeBase64UrlToJSON(challengeBase64Url) ?? "nil")")
-                            do {
-                                let schema = try Schema(filePath: Bundle.main.path(forResource: "auth.request", ofType: "json")!)
-                                
-                                // TODO: Relates to the comments below 
-                                // REPLACE WITH Ed25519Wallet.signData once fixed to ensure PROPER flow
-//                                let sig = try Ed25519Wallet?.signData(
-//                                    context: KeyContext.Address,
-//                                    account: 0,
-//                                    change: 0,
-//                                    keyIndex: 0,
-//                                    data: ...,
-//                                    metadata: SignMetadata(encoding: Encoding.none, schema: schema)
-//                                )
-
-                                // For now we validateData and call rawSign separately.
-                                let valid = try Ed25519Wallet?.validateData(data: Data(Utility.decodeBase64UrlToJSON(challengeBase64Url)!.utf8), metadata: SignMetadata(encoding: Encoding.none, schema: schema))
-
-                                if !(valid ?? false) {
-                                    throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Data is not valid"])
-                                }
-
-                                // Dangerous to expose rawSign like this
-                                if let sig = try Ed25519Wallet?.rawSign(
-                                    bip44Path: [0x8000_0000 + 44, 0x8000_0000 + 283, 0x8000_0000 + 0, 0, 0],
-                                    message: Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!)),
-                                    derivationType: BIP32DerivationType.Peikert
-                                ) {
-                                    print("Signature: \(sig.base64URLEncodedString())")
-                                    print("Signature Length (Raw Bytes): \(sig.count)")
-
-                                    // <-- LIQUID EXTENSION: -->
-
-                                    // Create the Liquid extension JSON object
-                                    let liquidExt: [String: Any] = [
-                                        "type": "algorand",
-                                        "requestId": requestId,
-                                        "address": address,
-                                        "signature": sig.base64URLEncodedString(),
-                                        "device": UIDevice.current.model,
-                                    ]
-                                    print("Created liquidExt JSON object: \(liquidExt)")
-                                    
-                                    // <-- ID & RawID: -->
-                                    // Deterministic ID - derived from P256 Public Key
-                                    let rawId = Data([UInt8](Utility.hashSHA256(P256KeyPair.publicKey.rawRepresentation)))
-                                    
-                                    print("Created rawId: \(rawId.map { String(format: "%02hhx", $0) }.joined())")
-                                    
-                                    // <-- clientDataJSON: -->
-                                    let clientData: [String: Any] = [
-                                        "type": "webauthn.create",
-                                        "challenge": challengeBase64Url,
-                                        "origin": "https://\(origin)"
-                                    ]
-
-                                    guard let clientDataJSONData = try? JSONSerialization.data(withJSONObject: clientData, options: []),
-                                        let clientDataJSON = String(data: clientDataJSONData, encoding: .utf8) else {
-                                        throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create clientDataJSON"])
-                                    }
-
-                                    let clientDataJSONBase64Url = clientDataJSONData.base64URLEncodedString()
-                                    
-                                    print("Created clientDataJSON: \(clientDataJSONBase64Url)")
-                                    
-                                    // <-- attestationObject: -->
-
-                                    let attestedCredData = Utility.getAttestedCredentialData(aaguid: UUID.init(uuidString: "5c7b7e9a-2b85-464e-9ea3-529582bb7e34")!, credentialId: rawId, publicKey: P256KeyPair.publicKey.rawRepresentation)
-                                    
-                                    print("created attestedCredData: \(attestedCredData.count)")
-                                    
-                                    guard let originData = origin.data(using: .utf8) else {
-                                        throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to encode origin to UTF-8"])
-                                    }
-
-                                    let rpIdHash = Utility.hashSHA256(originData)
-                                    
-                                    let userPresent = true
-                                    let userVerified = true
-                                    let signCount: UInt32 = 0
-                                    let attestedCredentialData = attestedCredData
-
-                                    let authData = AuthenticatorData(
-                                        rpIdHash,
-                                        userPresent,
-                                        userVerified,
-                                        signCount,
-                                        attestedCredentialData,
-                                        nil
-                                    )
-                                    
-                                    print("created authData: \(authData)")
-
-
-                                    let attObj: [String: Any] = [
-                                        "fmt": "none",
-                                        "attStmt": [:], // when the format is "none", `attStmt` should be empty.
-                                        "authData": authData.toData()
-                                    ]
-
-                                    let cborEncoded = try CBOR.encodeMap(attObj)
-                                    let attestationObject = Data(cborEncoded)
-                                    
-                                    print("Created attestationobject: \(attestationObject)")
-                                    
-                                    print("Attestationobject in Base64Url: \(attestationObject.base64URLEncodedString())")
-
-                                    let credential: [String: Any] = [
-                                        "id": rawId.base64URLEncodedString(),
-                                        "type": "public-key",
-                                        "rawId": rawId.base64URLEncodedString(),
-                                        "response": [
-                                            "clientDataJSON": clientDataJSONBase64Url,
-                                            "attestationObject": attestationObject.base64URLEncodedString()
-                                        ]
-                                    ]
-                                    
-                                    print("Created credential: \(credential)")
-
-                                    // Send the attestation result
-                                    attestationApi.postAttestationResult(
-                                        origin: origin,
-                                        userAgent: Utility.getUserAgent(),
-                                        credential: credential,
-                                        liquidExt: liquidExt
-                                    ) { result in
-                                        DispatchQueue.main.async {
-                                            switch result {
-                                            case .success(let data):
-                                                let responseString = String(data: data, encoding: .utf8) ?? "Invalid response"
-                                                print("Attestation result posted: \(responseString)")
-                                                self.scannedMessage = "Attestation result successfully posted: \(responseString)"
-                                                self.errorMessage = nil
-                                            case .failure(let error):
-                                                print("Failed to post attestation result: \(error)")
-                                                self.errorMessage = "Failed to post attestation result: \(error.localizedDescription)"
-                                                self.scannedMessage = nil
-                                            }
-                                            self.isLoading = false
-                                        }
-                                    }
-                                } else {
-                                    throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create signature"])
-                                }
-                            } catch {
-                                print("Failed to load schema: \(error)")
-                            }
-                        } else {
-                            print("Failed to parse response JSON or find the challenge field.")
-                        }
-                        
-                    case .failure(let error):
-                        print("Error: \(error)")
-                    }
-                    isLoading = false
-                }
-            })
-        } catch {
-            print("Error in register: \(error)")
-            DispatchQueue.main.async {
-                self.errorMessage = "Failed to register: \(error.localizedDescription)"
-                self.isLoading = false
+            // Post attestation options
+            let (data, sessionCookie) = try await attestationApi.postAttestationOptions(origin: origin, userAgent: userAgent, options: options)
+            Logger.debug("Response data: \(String(data: data, encoding: .utf8) ?? "Invalid data")")
+            if let cookie = sessionCookie {
+                Logger.debug("Session cookie: \(cookie)")
             }
+
+            guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                let challengeBase64Url = json["challenge"] as? String else {
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse response JSON or find the challenge field."])
+            }
+
+            Logger.debug("Challenge (Base64): \(challengeBase64Url)")
+            Logger.debug("Challenge Decoded: \([UInt8](Utility.decodeBase64Url(challengeBase64Url)!))")
+            Logger.debug("Challenge JSON: \(Utility.decodeBase64UrlToJSON(challengeBase64Url) ?? "nil")")
+
+            // Validate and sign the challenge
+            let schema = try Schema(filePath: Bundle.main.path(forResource: "auth.request", ofType: "json")!)
+            let valid = try Ed25519Wallet.validateData(data: Data(Utility.decodeBase64UrlToJSON(challengeBase64Url)!.utf8), metadata: SignMetadata(encoding: Encoding.none, schema: schema))
+
+            guard valid == true else {
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Data is not valid"])
+            }
+
+            let sig = try Ed25519Wallet.rawSign(
+                bip44Path: [UInt32(0x8000_0000) + 44, UInt32(0x8000_0000) + 283, UInt32(0x8000_0000) + 0, 0, 0],
+                message: Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!)),
+                derivationType: BIP32DerivationType.Peikert
+            )
+
+            Logger.debug("Signature: \(sig.base64URLEncodedString())")
+            Logger.debug("Signature Length (Raw Bytes): \(sig.count)")
+
+            // Create the Liquid extension JSON object
+            let liquidExt = createLiquidExt(
+                requestId: requestId,
+                address: address,
+                signature: sig.base64URLEncodedString()
+            )
+            Logger.debug("Created liquidExt JSON object: \(liquidExt)")
+
+            // Deterministic ID - derived from P256 Public Key
+            let rawId = Data([UInt8](Utility.hashSHA256(P256KeyPair.publicKey.rawRepresentation)))
+            Logger.debug("Created rawId: \(rawId.map { String(format: "%02hhx", $0) }.joined())")
+
+            // Create clientDataJSON
+            let clientData: [String: Any] = [
+                "type": "webauthn.create",
+                "challenge": challengeBase64Url,
+                "origin": "https://\(origin)"
+            ]
+
+            guard let clientDataJSONData = try? JSONSerialization.data(withJSONObject: clientData, options: []),
+                  let _ = String(data: clientDataJSONData, encoding: .utf8) else {
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create clientDataJSON"])
+            }
+
+            let clientDataJSONBase64Url = clientDataJSONData.base64URLEncodedString()
+            Logger.debug("Created clientDataJSON: \(clientDataJSONBase64Url)")
+
+            // Create attestationObject
+            let attestedCredData = Utility.getAttestedCredentialData(aaguid: UUID(uuidString: "5c7b7e9a-2b85-464e-9ea3-529582bb7e34")!, credentialId: rawId, publicKey: P256KeyPair.publicKey.rawRepresentation)
+            Logger.debug("created attestedCredData: \(attestedCredData.count)")
+
+            let rpIdHash = Utility.hashSHA256(origin.data(using: .utf8)!)
+            let authData = AttestationAuthData(
+                rpIdHash,
+                true,
+                true,
+                0,
+                attestedCredData,
+                nil
+            )
+            Logger.debug("created authData: \(authData)")
+
+            let attObj: [String: Any] = [
+                "fmt": "none",
+                "attStmt": [:],
+                "authData": authData.toData()
+            ]
+
+            let cborEncoded = try CBOR.encodeMap(attObj)
+            let attestationObject = Data(cborEncoded)
+            Logger.debug("Created attestationobject: \(attestationObject.base64URLEncodedString())")
+
+            let credential: [String: Any] = [
+                "id": rawId.base64URLEncodedString(),
+                "type": "public-key",
+                "rawId": rawId.base64URLEncodedString(),
+                "response": [
+                    "clientDataJSON": clientDataJSONBase64Url,
+                    "attestationObject": attestationObject.base64URLEncodedString()
+                ]
+            ]
+            Logger.debug("Created credential: \(credential)")
+
+            // Post attestation result
+            let responseData = try await attestationApi.postAttestationResult(
+                origin: origin,
+                userAgent: Utility.getUserAgent(),
+                credential: credential,
+                liquidExt: liquidExt
+            )
+
+            // Handle the server response
+            let responseString = String(data: responseData, encoding: .utf8) ?? "Invalid response"
+            Logger.info("Attestation result posted: \(responseString)")
+
+            // Parse the response to check for errors
+            if let responseJSON = try? JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any],
+            let errorReason = responseJSON["error"] as? String {
+                // If an error exists, propagate it
+                Logger.error("Registration failed: \(errorReason)")
+                errorMessage = "Registration failed: \(errorReason)"
+                scannedMessage = nil
+            } else {
+                // If no error, handle success
+                scannedMessage = "Registration completed successfully."
+                Logger.info("Registration completed successfully.")
+                errorMessage = nil
+
+                startSignaling(origin: origin, requestId: requestId)
+            }
+
+        } catch {
+            Logger.error("Error in register: \(error)")
+            errorMessage = "Failed to handle Liquid Auth URI Registration flow: \(error.localizedDescription)"
         }
     }
+
+
+    private func authenticate(origin: String, requestId: String) async {
+        do {
+
+            defer { 
+                isLoading = false
+            }
+            
+            let walletInfo = try getWalletInfo(origin: origin)
+            let Ed25519Wallet = walletInfo.ed25519Wallet
+            let DP256 = walletInfo.dp256
+            let derivedMainKey = walletInfo.derivedMainKey
+            let P256KeyPair = walletInfo.p256KeyPair
+            let address = walletInfo.address
+
+            let userAgent = Utility.getUserAgent()
+            
+            let assertionApi = AssertionApi()
+
+            let credentialId = Data([UInt8](Utility.hashSHA256(P256KeyPair.publicKey.rawRepresentation))).base64URLEncodedString()
+
+            // Call postAssertionOptions
+            let (data, sessionCookie) = try await assertionApi.postAssertionOptions(
+                origin: origin,
+                userAgent: userAgent,
+                credentialId: credentialId
+            )
+
+            // Handle the response
+            if let sessionCookie = sessionCookie {
+                Logger.debug("Session cookie: \(sessionCookie)")
+                // Store or use the session cookie as needed
+            }
+
+                // Parse the response data
+            guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                  let challengeBase64Url = json["challenge"] as? String,
+                  let _ = json["allowCredentials"] as? [[String: Any]],
+                  let _ = json["rpId"] as? String else {
+                throw NSError(domain: "Missing required fields in response", code: -1, userInfo: nil)
+            }
+            
+            Logger.debug("Response: \(String(describing: String(data: data, encoding: .utf8)))")
+
+            Logger.debug("Challenge (Base64): \(challengeBase64Url)")
+            Logger.debug("Challenge Decoded: \([UInt8](Utility.decodeBase64Url(challengeBase64Url)!))")
+            Logger.debug("Challenge JSON: \(Utility.decodeBase64UrlToJSON(challengeBase64Url) ?? "nil")")
+
+            // Validate and sign the challenge
+            let schema = try Schema(filePath: Bundle.main.path(forResource: "auth.request", ofType: "json")!)
+            let valid = try Ed25519Wallet.validateData(data: Data(Utility.decodeBase64UrlToJSON(challengeBase64Url)!.utf8), metadata: SignMetadata(encoding: Encoding.none, schema: schema))
+
+            guard valid == true else {
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Data is not valid"])
+            }
+
+            let sig = try Ed25519Wallet.rawSign(
+                bip44Path: [UInt32(0x8000_0000) + 44, UInt32(0x8000_0000) + 283, UInt32(0x8000_0000) + 0, 0, 0],
+                message: Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!)),
+                derivationType: BIP32DerivationType.Peikert
+            )
+
+            Logger.debug("Signature: \(sig.base64URLEncodedString())")
+            Logger.debug("Signature Length (Raw Bytes): \(sig.count)")
+            
+            // Create the Liquid extension JSON object
+            let liquidExt = createLiquidExt(
+                requestId: requestId,
+                address: address,
+                signature: sig.base64URLEncodedString()
+            )
+            Logger.debug("Created liquidExt JSON object: \(liquidExt)")
+
+            // Create clientDataJSON
+            let clientData: [String: Any] = [
+                "type": "webauthn.get",
+                "challenge": challengeBase64Url,
+                "origin": "https://\(origin)"
+            ]
+            
+            
+            guard let clientDataJSONData = try? JSONSerialization.data(withJSONObject: clientData, options: []),
+                  let _ = String(data: clientDataJSONData, encoding: .utf8) else {
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create clientDataJSON"])
+            }
+
+            let clientDataJSONBase64Url = clientDataJSONData.base64URLEncodedString()
+            Logger.debug("Created clientDataJSON: \(clientDataJSONBase64Url)")
+
+            let rpIdHash = Utility.hashSHA256(origin.data(using: .utf8)!)
+            let authenticatorData = AssertionAuthData(
+                rpIdHash: rpIdHash,
+                userPresent: true,
+                userVerified: true,
+                backupEligible: false,
+                backupState: false
+            ).toData()
+
+
+            let clientDataHash = Utility.hashSHA256(clientDataJSONData)
+            let dataToSign = authenticatorData + clientDataHash
+
+            let signature = try DP256.signWithDomainSpecificKeyPair(keyPair: P256KeyPair, payload: dataToSign)
+
+            let assertionResponse: [String: Any] = [
+                "id": credentialId,
+                "type": "public-key",
+                "userHandle": "tester",
+                "rawId": credentialId,
+                "response": [
+                    "clientDataJSON": clientDataJSONData.base64URLEncodedString(),
+                    "authenticatorData": authenticatorData.base64URLEncodedString(),
+                    "signature": signature.derRepresentation.base64URLEncodedString()
+                ]
+            ]
+
+            Logger.debug("Created assertion response: \(assertionResponse)")
+
+            // Serialize the assertion response into a JSON string
+            guard let assertionResponseData = try? JSONSerialization.data(withJSONObject: assertionResponse, options: []),
+                let assertionResponseJSON = String(data: assertionResponseData, encoding: .utf8) else {
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to serialize assertion response"])
+            }                
+
+            // Post the assertion result
+            let responseData = try await assertionApi.postAssertionResult(
+                origin: origin,
+                userAgent: userAgent,
+                credential: assertionResponseJSON,
+                liquidExt: liquidExt
+            )
+
+            // Handle the server response
+            let responseString = String(data: responseData, encoding: .utf8) ?? "Invalid response"
+            Logger.info("Assertion result posted: \(responseString)")
+
+            // Parse the response to check for errors
+            if let responseJSON = try? JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any],
+            let errorReason = responseJSON["error"] as? String {
+                // If an error exists, propagate it
+                Logger.error("Authentication failed: \(errorReason)")
+                errorMessage = "Authentication failed: \(errorReason)"
+                scannedMessage = nil
+            } else {
+                // If no error, handle success
+                scannedMessage = "Authentication completed successfully."
+                Logger.info("Authentication completed successfully.")
+                errorMessage = nil
+
+                startSignaling(origin: origin, requestId: requestId)
+            }
+
+        // Next step
+        } catch {
+            Logger.error("Error in authenticate: \(error)")
+            errorMessage = "Failed to retrieve authentication options: \(error.localizedDescription)"
+        }
+    }
+
+    private func startSignaling(origin: String, requestId: String) {
+        let signalService = SignalService.shared
+        
+        signalService.start(url: origin, httpClient: URLSession.shared)
+
+        let NODELY_TURN_USERNAME = "liquid-auth"
+        let NODELY_TURN_CREDENTIAL = "sqmcP4MiTKMT4TGEDSk9jgHY"
+
+        let iceServers = [
+            RTCIceServer(urlStrings: ["stun:stun.l.google.com:19302"]),
+            RTCIceServer(urlStrings: ["stun:stun1.l.google.com:19302"]),
+            RTCIceServer(urlStrings: ["stun:stun2.l.google.com:19302"]),
+            RTCIceServer(urlStrings: ["turn:global.turn.nodely.network:80?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
+            RTCIceServer(urlStrings: ["turns:global.turn.nodely.network:443?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
+            RTCIceServer(urlStrings: ["turn:eu.turn.nodely.io:80?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
+            RTCIceServer(urlStrings: ["turns:eu.turn.nodely.io:443?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
+            RTCIceServer(urlStrings: ["turn:us.turn.nodely.io:80?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
+            RTCIceServer(urlStrings: ["turns:us.turn.nodely.io:443?transport=tcp"],  username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
+        ]
+        
+        Task {
+            signalService.connectToPeer(
+                requestId: requestId,
+                type: "answer",
+                origin: origin,
+                iceServers: iceServers,
+                onMessage: { message in
+                    Logger.info("💬 Received message: \(message)")
+
+                    var displayMessage: String
+                    
+                    if let decoded = Utility.decodeBase64UrlCBORIfPossible(message) {
+                        displayMessage = "Decoded: \(decoded)"
+                    } else {
+                        displayMessage = message
+                    }
+
+                    DispatchQueue.main.async {
+                        self.scannedMessage = displayMessage
+                    }
+                },
+                onStateChange: { state in
+                    if state == "open" {
+                        Logger.info("✅ Data channel is OPEN")
+                    }
+                }
+            )
+        }
+    }
+
+    private func createLiquidExt(
+        requestId: String,
+        address: String,
+        signature: String
+    ) -> [String: Any] {
+        return [
+            "type": "algorand",
+            "requestId": requestId,
+            "address": address,
+            "signature": signature,
+            "device": UIDevice.current.model
+        ]
+    }
+}
+
+private struct WalletInfo {
+    let ed25519Wallet: XHDWalletAPI
+    let dp256: DeterministicP256
+    let derivedMainKey: Data
+    let p256KeyPair: P256.Signing.PrivateKey
+    let address: String
+}
+
+private func getWalletInfo(origin: String) throws -> WalletInfo {
+    let phrase = "salon zoo engage submit smile frost later decide wing sight chaos renew lizard rely canal coral scene hobby scare step bus leaf tobacco slice"
+    let seed = try Mnemonic.deterministicSeedString(from: phrase)
+    guard let ed25519Wallet = XHDWalletAPI(seed: seed) else {
+        throw NSError(domain: "Wallet creation failed", code: -1, userInfo: nil)
+    }
+    let dp256 = DeterministicP256()
+    let derivedMainKey = try dp256.genDerivedMainKeyWithBIP39(phrase: phrase)
+    let p256KeyPair = dp256.genDomainSpecificKeyPair(derivedMainKey: derivedMainKey, origin: "https://\(origin)", userHandle: "tester")
+    let pk = try ed25519Wallet.keyGen(context: KeyContext.Address, account: 0, change: 0, keyIndex: 0)
+    let address = try Utility.encodeAddress(bytes: pk)
+
+    return WalletInfo(
+        ed25519Wallet: ed25519Wallet,
+        dp256: dp256,
+        derivedMainKey: derivedMainKey,
+        p256KeyPair: p256KeyPair,
+        address: address
+    )
 }
 
 extension Data {

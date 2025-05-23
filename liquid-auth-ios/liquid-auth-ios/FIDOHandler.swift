@@ -5,7 +5,7 @@ struct FIDOHandler {
     /// Decodes a FIDO URI and returns a `FIDORequest` instance.
     static func decodeFIDOURI(_ uri: String) -> FIDORequest? {
         guard uri.starts(with: "FIDO:/") else {
-            print("Invalid FIDO URI.")
+            Logger.error("Invalid FIDO URI.")
             return nil
         }
 
@@ -14,19 +14,19 @@ struct FIDOHandler {
 
         // Decode the base10 string into bytes
         guard let decodedBytes = decodeBase10String(base10String) else {
-            print("Failed to decode base10 string.")
+            Logger.error("Failed to decode base10 string.")
             return nil
         }
 
         // Decode the bytes into a CBOR object
         guard let cborObject = decodeCBOR(from: decodedBytes) else {
-            print("Failed to decode CBOR.")
+            Logger.error("Failed to decode CBOR.")
             return nil
         }
 
         // Ensure the CBOR object is a map
         guard case let CBOR.map(cborMap) = cborObject else {
-            print("Invalid CBOR structure. Expected a map but got: \(cborObject)")
+            Logger.error("Invalid CBOR structure. Expected a map but got: \(cborObject)")
             return nil
         }
 
@@ -34,7 +34,7 @@ struct FIDOHandler {
         guard let publicKeyBytes = cborMap[CBOR.unsignedInt(0)]?.byteStringValue,
               let qrSecret = cborMap[CBOR.unsignedInt(1)]?.byteStringValue,
               let tunnelServerCount = cborMap[CBOR.unsignedInt(2)]?.unsignedIntValue else {
-            print("Missing required fields in CBOR.")
+            Logger.error("Missing required fields in CBOR.")
             return nil
         }
 
@@ -67,7 +67,7 @@ struct FIDOHandler {
 
         for chunk in chunks {
             guard let number = UInt64(chunk) else {
-                print("Invalid chunk: \(chunk)")
+                Logger.error("Invalid chunk: \(chunk)")
                 return nil
             }
 
@@ -82,7 +82,7 @@ struct FIDOHandler {
             case 15: byteCount = 6
             case 17: byteCount = 7
             default:
-                print("Invalid chunk length: \(chunk.count)")
+                Logger.error("Invalid chunk length: \(chunk.count)")
                 return nil
             }
 
@@ -100,7 +100,7 @@ struct FIDOHandler {
             let cborObject = try CBORDecoder(input: bytes).decodeItem()
             return cborObject
         } catch {
-            print("CBOR decoding failed: \(error)")
+            Logger.error("CBOR decoding failed: \(error)")
             return nil
         }
     }
