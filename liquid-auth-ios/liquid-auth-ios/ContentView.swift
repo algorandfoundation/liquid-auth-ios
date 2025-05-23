@@ -9,7 +9,6 @@ import WebRTC
 
 import Foundation
 
-
 struct ContentView: View {
     @State private var isScanning = false
     @State private var isLoading = false
@@ -239,19 +238,13 @@ struct ContentView: View {
                 isLoading = false
             }
 
-            // Get the appropriate Algorand Address
-            let phrase = "salon zoo engage submit smile frost later decide wing sight chaos renew lizard rely canal coral scene hobby scare step bus leaf tobacco slice"
-            let seed = try Mnemonic.deterministicSeedString(from: phrase)
-            let Ed25519Wallet = XHDWalletAPI(seed: seed)
-            let DP256 = DeterministicP256()
-            let derivedMainKey = try DP256.genDerivedMainKeyWithBIP39(phrase: phrase)
-            let P256KeyPair = DP256.genDomainSpecificKeyPair(derivedMainKey: derivedMainKey, origin: "https://\(origin)", userHandle: "tester")
+            let walletInfo = try getWalletInfo(origin: origin)
+            let Ed25519Wallet = walletInfo.ed25519Wallet
+            let DP256 = walletInfo.dp256
+            let derivedMainKey = walletInfo.derivedMainKey
+            let P256KeyPair = walletInfo.p256KeyPair
+            let address = walletInfo.address
 
-            guard let pk = try Ed25519Wallet?.keyGen(context: KeyContext.Address, account: 0, change: 0, keyIndex: 0) else {
-                throw NSError(domain: "Key generation failed", code: -1, userInfo: nil)
-            }
-
-            let address = try Utility.encodeAddress(bytes: pk)
             let attestationApi = AttestationApi()
 
             let options: [String: Any] = [
@@ -281,19 +274,17 @@ struct ContentView: View {
 
             // Validate and sign the challenge
             let schema = try Schema(filePath: Bundle.main.path(forResource: "auth.request", ofType: "json")!)
-            let valid = try Ed25519Wallet?.validateData(data: Data(Utility.decodeBase64UrlToJSON(challengeBase64Url)!.utf8), metadata: SignMetadata(encoding: Encoding.none, schema: schema))
+            let valid = try Ed25519Wallet.validateData(data: Data(Utility.decodeBase64UrlToJSON(challengeBase64Url)!.utf8), metadata: SignMetadata(encoding: Encoding.none, schema: schema))
 
             guard valid == true else {
                 throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Data is not valid"])
             }
 
-            guard let sig = try Ed25519Wallet?.rawSign(
+            let sig = try Ed25519Wallet.rawSign(
                 bip44Path: [UInt32(0x8000_0000) + 44, UInt32(0x8000_0000) + 283, UInt32(0x8000_0000) + 0, 0, 0],
                 message: Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!)),
                 derivationType: BIP32DerivationType.Peikert
-            ) else {
-                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create signature"])
-            }
+            )
 
             Logger.debug("Signature: \(sig.base64URLEncodedString())")
             Logger.debug("Signature Length (Raw Bytes): \(sig.count)")
@@ -401,26 +392,19 @@ struct ContentView: View {
             defer { 
                 isLoading = false
             }
+            
+            let walletInfo = try getWalletInfo(origin: origin)
+            let Ed25519Wallet = walletInfo.ed25519Wallet
+            let DP256 = walletInfo.dp256
+            let derivedMainKey = walletInfo.derivedMainKey
+            let P256KeyPair = walletInfo.p256KeyPair
+            let address = walletInfo.address
 
             let userAgent = Utility.getUserAgent()
             
             let assertionApi = AssertionApi()
-            // Get the appropriate Algorand Address
-            let phrase = "salon zoo engage submit smile frost later decide wing sight chaos renew lizard rely canal coral scene hobby scare step bus leaf tobacco slice"
-            let seed = try Mnemonic.deterministicSeedString(from: phrase)
-            let Ed25519Wallet = XHDWalletAPI(seed: seed)
-            let DP256 = DeterministicP256()
-            let derivedMainKey = try DP256.genDerivedMainKeyWithBIP39(phrase: phrase)
-            let P256KeyPair = DP256.genDomainSpecificKeyPair(derivedMainKey: derivedMainKey, origin: "https://\(origin)", userHandle: "tester")
-
-            guard let pk = try Ed25519Wallet?.keyGen(context: KeyContext.Address, account: 0, change: 0, keyIndex: 0) else {
-                throw NSError(domain: "Key generation failed", code: -1, userInfo: nil)
-            }
-
-            let address = try Utility.encodeAddress(bytes: pk)
 
             let credentialId = Data([UInt8](Utility.hashSHA256(P256KeyPair.publicKey.rawRepresentation))).base64URLEncodedString()
-
 
             // Call postAssertionOptions
             let (data, sessionCookie) = try await assertionApi.postAssertionOptions(
@@ -451,19 +435,18 @@ struct ContentView: View {
 
             // Validate and sign the challenge
             let schema = try Schema(filePath: Bundle.main.path(forResource: "auth.request", ofType: "json")!)
-            let valid = try Ed25519Wallet?.validateData(data: Data(Utility.decodeBase64UrlToJSON(challengeBase64Url)!.utf8), metadata: SignMetadata(encoding: Encoding.none, schema: schema))
+            let valid = try Ed25519Wallet.validateData(data: Data(Utility.decodeBase64UrlToJSON(challengeBase64Url)!.utf8), metadata: SignMetadata(encoding: Encoding.none, schema: schema))
 
             guard valid == true else {
                 throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Data is not valid"])
             }
 
-            guard let sig = try Ed25519Wallet?.rawSign(
+            let sig = try Ed25519Wallet.rawSign(
                 bip44Path: [UInt32(0x8000_0000) + 44, UInt32(0x8000_0000) + 283, UInt32(0x8000_0000) + 0, 0, 0],
                 message: Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!)),
                 derivationType: BIP32DerivationType.Peikert
-            ) else {
-                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create signature"])
-            }
+            )
+
 
             Logger.debug("Signature: \(sig.base64URLEncodedString())")
             Logger.debug("Signature Length (Raw Bytes): \(sig.count)")
@@ -613,6 +596,35 @@ struct ContentView: View {
             "device": UIDevice.current.model
         ]
     }
+}
+
+private struct WalletInfo {
+    let ed25519Wallet: XHDWalletAPI
+    let dp256: DeterministicP256
+    let derivedMainKey: Data
+    let p256KeyPair: P256.Signing.PrivateKey
+    let address: String
+}
+
+private func getWalletInfo(origin: String) throws -> WalletInfo {
+    let phrase = "salon zoo engage submit smile frost later decide wing sight chaos renew lizard rely canal coral scene hobby scare step bus leaf tobacco slice"
+    let seed = try Mnemonic.deterministicSeedString(from: phrase)
+    guard let ed25519Wallet = XHDWalletAPI(seed: seed) else {
+        throw NSError(domain: "Wallet creation failed", code: -1, userInfo: nil)
+    }
+    let dp256 = DeterministicP256()
+    let derivedMainKey = try dp256.genDerivedMainKeyWithBIP39(phrase: phrase)
+    let p256KeyPair = dp256.genDomainSpecificKeyPair(derivedMainKey: derivedMainKey, origin: "https://\(origin)", userHandle: "tester")
+    let pk = try ed25519Wallet.keyGen(context: KeyContext.Address, account: 0, change: 0, keyIndex: 0)
+    let address = try Utility.encodeAddress(bytes: pk)
+
+    return WalletInfo(
+        ed25519Wallet: ed25519Wallet,
+        dp256: dp256,
+        derivedMainKey: derivedMainKey,
+        p256KeyPair: p256KeyPair,
+        address: address
+    )
 }
 
 extension Data {
