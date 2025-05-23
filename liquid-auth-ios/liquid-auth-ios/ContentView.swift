@@ -373,7 +373,8 @@ struct ContentView: View {
                 scannedMessage = nil
             } else {
                 // If no error, handle success
-                scannedMessage = "Attestation result successfully posted: \(responseString)"
+                scannedMessage = "Registration completed successfully."
+                Logger.info("Registration completed successfully.")
                 errorMessage = nil
 
                 startSignaling(origin: origin, requestId: requestId)
@@ -446,7 +447,6 @@ struct ContentView: View {
                 message: Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!)),
                 derivationType: BIP32DerivationType.Peikert
             )
-
 
             Logger.debug("Signature: \(sig.base64URLEncodedString())")
             Logger.debug("Signature Length (Raw Bytes): \(sig.count)")
@@ -532,6 +532,7 @@ struct ContentView: View {
             } else {
                 // If no error, handle success
                 scannedMessage = "Authentication completed successfully."
+                Logger.info("Authentication completed successfully.")
                 errorMessage = nil
 
                 startSignaling(origin: origin, requestId: requestId)
@@ -572,7 +573,9 @@ struct ContentView: View {
                 iceServers: iceServers,
                 onMessage: { message in
                     Logger.info("💬 Received message: \(message)")
-                    // Handle incoming messages here
+                    DispatchQueue.main.async {
+                        self.scannedMessage = message
+                    }
                 },
                 onStateChange: { state in
                     if state == "open" {
