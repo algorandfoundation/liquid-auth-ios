@@ -95,6 +95,31 @@ struct Utility {
         return nil
     }
 
+    public static func decodeBase64UrlCBORIfPossible(_ message: String) -> String? {
+        // 1. Convert Base64URL to Data
+        var base64 = message
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let padding = 4 - base64.count % 4
+        if padding < 4 {
+            base64 += String(repeating: "=", count: padding)
+        }
+        guard let data = Data(base64Encoded: base64) else { return nil }
+        // 2. Try to decode as CBOR
+        do {
+            let cbor = try CBOR.decode([UInt8](data))
+            // Try to pretty-print as JSON if possible
+            if let dict = cbor?.asSwiftObject() {
+                let jsonData = try JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted])
+                return String(data: jsonData, encoding: .utf8)
+            }
+            return String(describing: cbor)
+        } catch {
+            return nil
+        }
+    }
+
+
     static func encodePKToEC2COSEKey(_ publicKey: Data) -> [UInt8] {
         var adjustedPublicKey = publicKey
 
@@ -170,5 +195,59 @@ extension UUID {
     func toData() -> Data {
         var uuid = self.uuid
         return Data(bytes: &uuid, count: MemoryLayout.size(ofValue: uuid))
+    }
+}
+
+private extension String {
+    var isPrintable: Bool {
+        // Checks if the string contains mostly printable characters
+        let printable = self.filter { $0.isASCII && $0.isPrintable }
+        return Double(printable.count) / Double(self.count) > 0.8
+    }
+}
+
+private extension Character {
+    var isPrintable: Bool {
+        guard let scalar = unicodeScalars.first else { return false }
+        return scalar.isASCII && scalar.value >= 32 && scalar.value < 127
+    }
+}
+
+private extension CBOR {
+    func asSwiftObject() -> Any? {
+        switch self {
+        case .map(let map):
+            var dict = [String: Any]()
+            for (k, v) in map {
+                if let key = k.asStringOrNumber() {
+                    dict[key] = v.asSwiftObject()
+                }
+            }
+            return dict
+        case .array(let arr):
+            return arr.map { $0.asSwiftObject() }
+        case .utf8String(let str):
+            return str
+        case .unsignedInt(let n):
+            return n
+        case .negativeInt(let n):
+            return -1 - Int64(n)
+        case .boolean(let b):
+            return b
+        case .null:
+            return NSNull()
+        case .double(let d):
+            return d
+        default:
+            return String(describing: self)
+        }
+    }
+    func asStringOrNumber() -> String? {
+        switch self {
+        case .utf8String(let str): return str
+        case .unsignedInt(let n): return String(n)
+        case .negativeInt(let n): return String(-1 - Int64(n))
+        default: return nil
+        }
     }
 }

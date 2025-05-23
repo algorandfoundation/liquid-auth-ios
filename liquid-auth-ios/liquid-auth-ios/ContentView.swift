@@ -46,8 +46,13 @@ struct ContentView: View {
                     }
 
                     if let message = scannedMessage {
-                        Text("Message: \(message)")
-                            .padding()
+                        ScrollView {
+                            Text("Message: \(message)")
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .frame(maxHeight: 300) 
+                        .padding()
                     }
 
                     if let error = errorMessage {
@@ -573,8 +578,17 @@ struct ContentView: View {
                 iceServers: iceServers,
                 onMessage: { message in
                     Logger.info("💬 Received message: \(message)")
+
+                    var displayMessage: String
+                    
+                    if let decoded = Utility.decodeBase64UrlCBORIfPossible(message) {
+                        displayMessage = "Decoded: \(decoded)"
+                    } else {
+                        displayMessage = message
+                    }
+
                     DispatchQueue.main.async {
-                        self.scannedMessage = message
+                        self.scannedMessage = displayMessage
                     }
                 },
                 onStateChange: { state in
