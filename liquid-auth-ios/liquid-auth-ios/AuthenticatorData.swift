@@ -1,63 +1,109 @@
 import Foundation
 
-
-// struct AuthenticatorData {
-    
-//     init() {}
-    
-//     func toData() -> Data {
-//         return Data()
-//     }
-// }
-
 struct AuthenticatorData: Codable {
-   let rpIdHash: Data
-   let userPresent: Bool
-   let userVerified: Bool
-   let atIncluded: Bool
-   let edIncluded: Bool
-   var signCount: UInt32 // 32-bit unsigned big-endian integer
-   let attestedCredentialData: Data?
-   let extensions: Data?
+    let rpIdHash: Data
+    let userPresent: Bool
+    let userVerified: Bool
+    let backupEligible: Bool
+    let backupState: Bool
+    let attestedCredentialData: Data?
+    let extensions: Data?
+    var signCount: UInt32
 
-   // Define these as static constants
-   static let upMask: UInt8 = 1      // User present result
-   static let uvMask: UInt8 = 1 << 2 // User verified result
-   static let atMask: UInt8 = 1 << 6 // Attested credential data included
-   static let edMask: UInt8 = 1 << 7 // Extension data included
+    // Flag masks (WebAuthn spec)
+    static let upMask: UInt8 = 1      // User present (bit 0)
+    static let uvMask: UInt8 = 1 << 2 // User verified (bit 2)
+    static let beMask: UInt8 = 1 << 3 // Backup eligible (bit 3)
+    static let bsMask: UInt8 = 1 << 4 // Backup state (bit 4)
+    static let atMask: UInt8 = 1 << 6 // Attested credential data included (bit 6)
+    static let edMask: UInt8 = 1 << 7 // Extension data included (bit 7)
 
-   init(_ rpIdHash: Data, _ up: Bool, _ uv: Bool, _ count: UInt32,
-        _ attestedCredData: Data?, _ extensions: Data?) {
-       self.rpIdHash = rpIdHash
-       self.userPresent = up
-       self.userVerified = uv
-       self.atIncluded = attestedCredData != nil ? true : false
-       self.edIncluded = extensions != nil
-       self.signCount = count
-       self.attestedCredentialData = attestedCredData
-       self.extensions = extensions
-   }
+    // General initializer
+    init(
+        rpIdHash: Data,
+        userPresent: Bool,
+        userVerified: Bool,
+        backupEligible: Bool = false,
+        backupState: Bool = false,
+        signCount: UInt32 = 0,
+        attestedCredentialData: Data? = nil,
+        extensions: Data? = nil
+    ) {
+        self.rpIdHash = rpIdHash
+        self.userPresent = userPresent
+        self.userVerified = userVerified
+        self.backupEligible = backupEligible
+        self.backupState = backupState
+        self.signCount = signCount
+        self.attestedCredentialData = attestedCredentialData
+        self.extensions = extensions
+    }
 
-   func createFlags(up userPresent: Bool, uv userVerified: Bool, at atIncluded: Bool, ed edIncluded: Bool) -> UInt8 {
-       var flags: UInt8 = 0
-       if userPresent { flags = flags | AuthenticatorData.upMask }
-       if userVerified { flags = flags | AuthenticatorData.uvMask }
-       if atIncluded { flags = flags | AuthenticatorData.atMask }
-       if edIncluded { flags = flags | AuthenticatorData.edMask }
-       return flags
-   }
+    // Convenience for attestation
+    static func attestation(
+        rpIdHash: Data,
+        userPresent: Bool,
+        userVerified: Bool,
+        signCount: UInt32,
+        attestedCredentialData: Data,
+        extensions: Data? = nil
+    ) -> AuthenticatorData {
+        return AuthenticatorData(
+            rpIdHash: rpIdHash,
+            userPresent: userPresent,
+            userVerified: userVerified,
+            backupEligible: false,
+            backupState: false,
+            signCount: signCount,
+            attestedCredentialData: attestedCredentialData,
+            extensions: extensions
+        )
+    }
 
-   func toData() -> Data {
-       let flags = self.createFlags(up: self.userPresent, uv: self.userVerified, at: self.atIncluded, ed: self.edIncluded)
-       let flagsData = flags.toData()
-       let signCountData = self.signCount.toDataBigEndian()
-       var data = rpIdHash + flagsData + signCountData
-       if let attestedCredentialData = self.attestedCredentialData {
-           data += attestedCredentialData
-       }
-       if let extensions = self.extensions {
-           data += extensions
-       }
-       return data
-   }
+    // Convenience for assertion
+    static func assertion(
+        rpIdHash: Data,
+        userPresent: Bool,
+        userVerified: Bool,
+        backupEligible: Bool = false,
+        backupState: Bool = false,
+        signCount: UInt32 = 0
+    ) -> AuthenticatorData {
+        return AuthenticatorData(
+            rpIdHash: rpIdHash,
+            userPresent: userPresent,
+            userVerified: userVerified,
+            backupEligible: backupEligible,
+            backupState: backupState,
+            signCount: signCount,
+            attestedCredentialData: nil,
+            extensions: nil
+        )
+    }
+
+    // Flag byte builder
+    func createFlags() -> UInt8 {
+        var flags: UInt8 = 0
+        if userPresent { flags |= Self.upMask }
+        if userVerified { flags |= Self.uvMask }
+        if backupEligible { flags |= Self.beMask }
+        if backupState { flags |= Self.bsMask }
+        if attestedCredentialData != nil { flags |= Self.atMask }
+        if extensions != nil { flags |= Self.edMask }
+        return flags
+    }
+
+    func toData() -> Data {
+        let flags = createFlags()
+        let flagsData = Data([flags])
+        let signCountData = signCount.toDataBigEndian()
+        var data = rpIdHash + flagsData + signCountData
+        if let attestedCredentialData = attestedCredentialData {
+            data += attestedCredentialData
+        }
+        if let extensions = extensions {
+            data += extensions
+        }
+        return data
+    }
 }

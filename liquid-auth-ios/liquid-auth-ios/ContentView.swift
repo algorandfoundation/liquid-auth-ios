@@ -226,7 +226,6 @@ struct ContentView: View {
                 showActionSheet = true
                 }
             }
-            .padding()
 
             // Show a loading overlay when isLoading is true
             if isLoading {
@@ -341,13 +340,13 @@ struct ContentView: View {
             Logger.debug("created attestedCredData: \(attestedCredData.count)")
 
             let rpIdHash = Utility.hashSHA256(origin.data(using: .utf8)!)
-            let authData = AttestationAuthData(
-                rpIdHash,
-                true,
-                true,
-                0,
-                attestedCredData,
-                nil
+            let authData = AuthenticatorData.attestation(
+                rpIdHash: rpIdHash,
+                userPresent: true,
+                userVerified: true,
+                signCount: 0,
+                attestedCredentialData: attestedCredData,
+                extensions: nil
             )
             Logger.debug("created authData: \(authData)")
 
@@ -496,7 +495,7 @@ struct ContentView: View {
             Logger.debug("Created clientDataJSON: \(clientDataJSONBase64Url)")
 
             let rpIdHash = Utility.hashSHA256(origin.data(using: .utf8)!)
-            let authenticatorData = AssertionAuthData(
+            let authenticatorData = AuthenticatorData.assertion(
                 rpIdHash: rpIdHash,
                 userPresent: true,
                 userVerified: true,
