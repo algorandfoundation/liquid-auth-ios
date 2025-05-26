@@ -6,6 +6,7 @@ import MnemonicSwift
 import CryptoKit
 import deterministicP256_swift
 import WebRTC
+import LocalAuthentication
 
 import Foundation
 
@@ -257,6 +258,13 @@ struct ContentView: View {
                 isLoading = false
             }
 
+            let verified = await requireUserVerification(reason: "Please verify your identity to continue")
+            guard verified else {
+                errorMessage = "User verification failed or was cancelled."
+                isLoading = false
+                return
+            }
+
             let walletInfo = try getWalletInfo(origin: origin)
             let Ed25519Wallet = walletInfo.ed25519Wallet
             let DP256 = walletInfo.dp256
@@ -411,6 +419,13 @@ struct ContentView: View {
 
             defer { 
                 isLoading = false
+            }
+
+            let verified = await requireUserVerification(reason: "Please verify your identity to continue")
+            guard verified else {
+                errorMessage = "User verification failed or was cancelled."
+                isLoading = false
+                return
             }
             
             let walletInfo = try getWalletInfo(origin: origin)
@@ -656,6 +671,23 @@ private func getWalletInfo(origin: String) throws -> WalletInfo {
         p256KeyPair: p256KeyPair,
         address: address
     )
+}
+
+func requireUserVerification(reason: String = "Authenticate to continue") async -> Bool {
+    let context = LAContext()
+    var error: NSError?
+    let policy: LAPolicy = .deviceOwnerAuthentication // biometrics OR passcode
+
+    if context.canEvaluatePolicy(policy, error: &error) {
+        return await withCheckedContinuation { continuation in
+            context.evaluatePolicy(policy, localizedReason: reason) { success, _ in
+                continuation.resume(returning: success)
+            }
+        }
+    } else {
+        // Device does not support biometrics/passcode
+        return false
+    }
 }
 
 extension Data {
