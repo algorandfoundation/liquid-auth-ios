@@ -344,7 +344,7 @@ struct ContentView: View {
             Logger.debug("Created clientDataJSON: \(clientDataJSONBase64Url)")
 
             // Create attestationObject
-            let attestedCredData = Utility.getAttestedCredentialData(aaguid: UUID(uuidString: "5c7b7e9a-2b85-464e-9ea3-529582bb7e34")!, credentialId: rawId, publicKey: P256KeyPair.publicKey.rawRepresentation)
+            let attestedCredData = Utility.getAttestedCredentialData(aaguid: UUID(uuidString: "1F59713A-C021-4E63-9158-2CC5FDC14E52")!, credentialId: rawId, publicKey: P256KeyPair.publicKey.rawRepresentation)
             Logger.debug("created attestedCredData: \(attestedCredData.count)")
 
             let rpIdHash = Utility.hashSHA256(origin.data(using: .utf8)!)
