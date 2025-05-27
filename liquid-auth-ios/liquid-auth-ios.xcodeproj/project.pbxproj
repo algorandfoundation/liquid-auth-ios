@@ -10,6 +10,8 @@
 		6E0A054F2DC77745004A74E2 /* deterministicP256-swift in Frameworks */ = {isa = PBXBuildFile; productRef = 6E0A054E2DC77745004A74E2 /* deterministicP256-swift */; };
 		6E0A05A02DCA3132004A74E2 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = 6E0A059F2DCA3132004A74E2 /* SocketIO */; };
 		6E97FCC52DC0CD35006224B5 /* x-hd-wallet-api in Frameworks */ = {isa = PBXBuildFile; productRef = 6E97FCC42DC0CD35006224B5 /* x-hd-wallet-api */; };
+		6EB1BFFC2DE6105800D2CD0F /* AuthenticationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6EB1BFFB2DE6105700D2CD0F /* AuthenticationServices.framework */; };
+		6EB1C0072DE6105800D2CD0F /* Liquid Auth.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6EB1BFFA2DE6105700D2CD0F /* Liquid Auth.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6EE5379A2DAE75340032EC12 /* SwiftCBOR in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537992DAE75340032EC12 /* SwiftCBOR */; };
 		6EE537D92DAFA7AE0032EC12 /* WebRTC in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537D82DAFA7AE0032EC12 /* WebRTC */; };
 		6EE537E92DBD631D0032EC12 /* MnemonicSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 6EE537E82DBD631D0032EC12 /* MnemonicSwift */; };
@@ -31,13 +33,46 @@
 			remoteGlobalIDString = 6E68E68B2DA924920087CB6D;
 			remoteInfo = "liquid-auth-ios";
 		};
+		6EB1C0052DE6105800D2CD0F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6E68E6842DA924920087CB6D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6EB1BFF92DE6105700D2CD0F;
+			remoteInfo = "Liquid Auth";
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		6EB1C00C2DE6105800D2CD0F /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				6EB1C0072DE6105800D2CD0F /* Liquid Auth.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		6E68E68C2DA924920087CB6D /* liquid-auth-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "liquid-auth-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6E68E69C2DA924940087CB6D /* liquid-auth-iosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "liquid-auth-iosTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6E68E6A62DA924940087CB6D /* liquid-auth-iosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "liquid-auth-iosUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6EB1BFFA2DE6105700D2CD0F /* Liquid Auth.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Liquid Auth.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6EB1BFFB2DE6105700D2CD0F /* AuthenticationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AuthenticationServices.framework; path = System/Library/Frameworks/AuthenticationServices.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		6EB1C0082DE6105800D2CD0F /* Exceptions for "Liquid Auth" folder in "Liquid Auth" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 6EB1BFF92DE6105700D2CD0F /* Liquid Auth */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		6E68E68E2DA924920087CB6D /* liquid-auth-ios */ = {
@@ -53,6 +88,14 @@
 		6E68E6A92DA924940087CB6D /* liquid-auth-iosUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "liquid-auth-iosUITests";
+			sourceTree = "<group>";
+		};
+		6EB1BFFD2DE6105800D2CD0F /* Liquid Auth */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6EB1C0082DE6105800D2CD0F /* Exceptions for "Liquid Auth" folder in "Liquid Auth" target */,
+			);
+			path = "Liquid Auth";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -86,6 +129,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6EB1BFF72DE6105700D2CD0F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6EB1BFFC2DE6105800D2CD0F /* AuthenticationServices.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -95,6 +146,7 @@
 				6E68E68E2DA924920087CB6D /* liquid-auth-ios */,
 				6E68E69F2DA924940087CB6D /* liquid-auth-iosTests */,
 				6E68E6A92DA924940087CB6D /* liquid-auth-iosUITests */,
+				6EB1BFFD2DE6105800D2CD0F /* Liquid Auth */,
 				6EE537982DAE75340032EC12 /* Frameworks */,
 				6E68E68D2DA924920087CB6D /* Products */,
 			);
@@ -106,6 +158,7 @@
 				6E68E68C2DA924920087CB6D /* liquid-auth-ios.app */,
 				6E68E69C2DA924940087CB6D /* liquid-auth-iosTests.xctest */,
 				6E68E6A62DA924940087CB6D /* liquid-auth-iosUITests.xctest */,
+				6EB1BFFA2DE6105700D2CD0F /* Liquid Auth.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -113,6 +166,7 @@
 		6EE537982DAE75340032EC12 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				6EB1BFFB2DE6105700D2CD0F /* AuthenticationServices.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -127,10 +181,12 @@
 				6E68E6882DA924920087CB6D /* Sources */,
 				6E68E6892DA924920087CB6D /* Frameworks */,
 				6E68E68A2DA924920087CB6D /* Resources */,
+				6EB1C00C2DE6105800D2CD0F /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				6EB1C0062DE6105800D2CD0F /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				6E68E68E2DA924920087CB6D /* liquid-auth-ios */,
@@ -195,6 +251,28 @@
 			productReference = 6E68E6A62DA924940087CB6D /* liquid-auth-iosUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		6EB1BFF92DE6105700D2CD0F /* Liquid Auth */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6EB1C0092DE6105800D2CD0F /* Build configuration list for PBXNativeTarget "Liquid Auth" */;
+			buildPhases = (
+				6EB1BFF62DE6105700D2CD0F /* Sources */,
+				6EB1BFF72DE6105700D2CD0F /* Frameworks */,
+				6EB1BFF82DE6105700D2CD0F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				6EB1BFFD2DE6105800D2CD0F /* Liquid Auth */,
+			);
+			name = "Liquid Auth";
+			packageProductDependencies = (
+			);
+			productName = "Liquid Auth";
+			productReference = 6EB1BFFA2DE6105700D2CD0F /* Liquid Auth.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -215,6 +293,9 @@
 					6E68E6A52DA924940087CB6D = {
 						CreatedOnToolsVersion = 16.1;
 						TestTargetID = 6E68E68B2DA924920087CB6D;
+					};
+					6EB1BFF92DE6105700D2CD0F = {
+						CreatedOnToolsVersion = 16.1;
 					};
 				};
 			};
@@ -244,6 +325,7 @@
 				6E68E68B2DA924920087CB6D /* liquid-auth-ios */,
 				6E68E69B2DA924940087CB6D /* liquid-auth-iosTests */,
 				6E68E6A52DA924940087CB6D /* liquid-auth-iosUITests */,
+				6EB1BFF92DE6105700D2CD0F /* Liquid Auth */,
 			);
 		};
 /* End PBXProject section */
@@ -264,6 +346,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		6E68E6A42DA924940087CB6D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6EB1BFF82DE6105700D2CD0F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -294,6 +383,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6EB1BFF62DE6105700D2CD0F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -306,6 +402,11 @@
 			isa = PBXTargetDependency;
 			target = 6E68E68B2DA924920087CB6D /* liquid-auth-ios */;
 			targetProxy = 6E68E6A72DA924940087CB6D /* PBXContainerItemProxy */;
+		};
+		6EB1C0062DE6105800D2CD0F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6EB1BFF92DE6105700D2CD0F /* Liquid Auth */;
+			targetProxy = 6EB1C0052DE6105800D2CD0F /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -557,6 +658,58 @@
 			};
 			name = Release;
 		};
+		6EB1C00A2DE6105800D2CD0F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "Liquid Auth/Liquid_Auth.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7U5G65G3QT;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Liquid Auth/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Liquid Auth";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "foundation.algorand.liquid-auth-ios.Liquid-Auth";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		6EB1C00B2DE6105800D2CD0F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "Liquid Auth/Liquid_Auth.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7U5G65G3QT;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Liquid Auth/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Liquid Auth";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "foundation.algorand.liquid-auth-ios.Liquid-Auth";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -592,6 +745,15 @@
 			buildConfigurations = (
 				6E68E6B72DA924940087CB6D /* Debug */,
 				6E68E6B82DA924940087CB6D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6EB1C0092DE6105800D2CD0F /* Build configuration list for PBXNativeTarget "Liquid Auth" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6EB1C00A2DE6105800D2CD0F /* Debug */,
+				6EB1C00B2DE6105800D2CD0F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
