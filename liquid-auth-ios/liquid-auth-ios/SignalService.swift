@@ -11,6 +11,8 @@ class SignalService {
     private var peerConnection: RTCPeerConnection?
     private var dataChannelDelegates: [RTCDataChannel: DataChannelDelegate] = [:]
 
+    private var messageQueue: [String] = []
+
     private var lastKnownReferer: String?
     private var isDeepLink: Bool = true
 
@@ -77,8 +79,16 @@ class SignalService {
                 onDataChannelOpen: { [weak self] dataChannel in
                     self?.dataChannel = dataChannel
                     Logger.debug("Data channel is open and ready: \(dataChannel.label)")
+                    self?.flushMessageQueue()
                 },
-                onMessage: onMessage,
+                onMessage: { [weak self] message in
+                    // Set dataChannel if not already set
+                    if let peerClient = self?.signalClient?.peerClient,
+                       let dc = peerClient.peerConnection?.dataChannel(forLabel: "liquid", configuration: RTCDataChannelConfiguration()) {
+                        self?.dataChannel = dc
+                    }
+                    onMessage(message)
+                },
                 onStateChange: onStateChange
             )
 
@@ -101,15 +111,25 @@ class SignalService {
 
     // MARK: - Send a message through the data channel
     func sendMessage(_ message: String) {
-        guard let dataChannel = dataChannel else {
-            Logger.error("sendMessage: Data channel is not available.")
-            return
+        if let dataChannel = dataChannel {
+            let buffer = RTCDataBuffer(data: message.data(using: .utf8)!, isBinary: false)
+            dataChannel.sendData(buffer)
+            Logger.info("Message sent: \(message)")
+        } else {
+            Logger.error("sendMessage: Data channel is not available. Queuing message.")
+            messageQueue.append(message)
         }
+    }
 
-        let buffer = RTCDataBuffer(data: message.data(using: .utf8)!, isBinary: false)
-        dataChannel.sendData(buffer)
-
-        Logger.info("Message sent: \(message)")
+    // Flush queued messages when the data channel becomes available
+    private func flushMessageQueue() {
+        guard let dataChannel = dataChannel else { return }
+        for message in messageQueue {
+            let buffer = RTCDataBuffer(data: message.data(using: .utf8)!, isBinary: false)
+            dataChannel.sendData(buffer)
+            Logger.info("Flushed queued message: \(message)")
+        }
+        messageQueue.removeAll()
     }
 
     // MARK: - Send a notification

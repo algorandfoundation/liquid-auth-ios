@@ -404,7 +404,7 @@ struct ContentView: View {
                 Logger.info("Registration completed successfully.")
                 errorMessage = nil
 
-                startSignaling(origin: origin, requestId: requestId)
+                startSignaling(origin: origin, requestId: requestId, walletInfo: walletInfo)
             }
 
         } catch {
@@ -569,7 +569,7 @@ struct ContentView: View {
                 Logger.info("Authentication completed successfully.")
                 errorMessage = nil
 
-                startSignaling(origin: origin, requestId: requestId)
+                startSignaling(origin: origin, requestId: requestId, walletInfo: walletInfo)
             }
 
         // Next step
@@ -579,7 +579,7 @@ struct ContentView: View {
         }
     }
 
-    private func startSignaling(origin: String, requestId: String) {
+    private func startSignaling(origin: String, requestId: String, walletInfo: WalletInfo) {
         let signalService = SignalService.shared
         
         signalService.start(url: origin, httpClient: URLSession.shared)
@@ -614,6 +614,10 @@ struct ContentView: View {
                         displayMessage = "Decoded: \(decoded)"
                     } else {
                         displayMessage = message
+                    }
+
+                    if let arc27Response = handleArc27Message(message, ed25519Wallet: walletInfo.ed25519Wallet) {
+                        signalService.sendMessage(arc27Response)
                     }
 
                     DispatchQueue.main.async {
@@ -671,6 +675,68 @@ private func getWalletInfo(origin: String) throws -> WalletInfo {
         p256KeyPair: p256KeyPair,
         address: address
     )
+}
+
+private func handleArc27Message(_ message: String, ed25519Wallet: XHDWalletAPI) -> String? {
+    // 1. Decode base64url CBOR using Utility
+    guard let cborData = Utility.decodeBase64Url(message),
+          let cbor = try? CBOR.decode([UInt8](cborData)),
+          let dict = (cbor.asSwiftObject() as? [String: Any]) else {
+        Logger.error("Failed to decode CBOR or convert to dictionary")
+        return nil
+    }
+
+    // 2. Check reference and extract fields
+    guard let reference = dict["reference"] as? String,
+          reference == "arc0027:sign_transactions:request",
+          let params = dict["params"] as? [String: Any],
+          let txns = params["txns"] as? [[String: Any]],
+          let requestId = dict["id"] as? String else {
+        Logger.error("Invalid ARC27 request format")
+        return nil
+    }
+
+    // 3. Sign each transaction
+    var signedTxns: [String] = []
+    for txnObj in txns {
+        guard let txnBase64Url = txnObj["txn"] as? String,
+              let txnBytes = Utility.decodeBase64Url(txnBase64Url) else {
+            Logger.error("Failed to decode transaction base64url")
+            continue
+        }
+
+        // Sign the transaction bytes with Ed25519
+        guard let signature = try? ed25519Wallet.rawSign(
+            bip44Path: [UInt32(0x8000_0000) + 44, UInt32(0x8000_0000) + 283, UInt32(0x8000_0000) + 0, 0, 0],
+            message: txnBytes,
+            derivationType: BIP32DerivationType.Peikert
+        ) else {
+            Logger.error("Failed to sign transaction")
+            continue
+        }
+
+        let sigBase64Url = signature.base64URLEncodedString()
+        signedTxns.append(sigBase64Url)
+    }
+
+    // 4. Build response object
+    let response: [String: Any] = [
+        "id": UUID().uuidString,
+        "reference": "arc0027:sign_transactions:response",
+        "requestId": requestId,
+        "result": [
+            "providerId": params["providerId"] ?? "liquid-auth-ios",
+            "signedTxns": signedTxns
+        ]
+    ]
+
+    // 5. CBOR encode and base64url encode
+    guard let cborResponse = try? CBOR.encodeMap(response) else {
+        Logger.error("Failed to CBOR encode response")
+        return nil
+    }
+    let base64urlResponse = Data(cborResponse).base64URLEncodedString()
+    return base64urlResponse
 }
 
 func requireUserVerification(reason: String = "Authenticate to continue") async -> Bool {

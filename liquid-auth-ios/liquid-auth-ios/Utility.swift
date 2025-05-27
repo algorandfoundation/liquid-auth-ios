@@ -213,7 +213,7 @@ private extension Character {
     }
 }
 
-private extension CBOR {
+extension CBOR {
     func asSwiftObject() -> Any? {
         switch self {
         case .map(let map):
