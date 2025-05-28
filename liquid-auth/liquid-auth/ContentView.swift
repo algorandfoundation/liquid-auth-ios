@@ -7,6 +7,7 @@ import CryptoKit
 import deterministicP256_swift
 import WebRTC
 import LocalAuthentication
+import AuthenticationServices
 
 import Foundation
 
@@ -258,6 +259,16 @@ struct ContentView: View {
                 isLoading = false
             }
 
+            let state = await ASCredentialIdentityStore.shared.state()
+            if !state.isEnabled {
+                DispatchQueue.main.async {
+                    self.scannedMessage = nil
+                    self.errorMessage = "AutoFill Passwords & Passkeys is not enabled for Liquid Auth. Please enable it in Settings > General > AutoFill & Passwords."
+                    self.isLoading = false
+                }
+                return
+            }
+
             let verified = await requireUserVerification(reason: "Please verify your identity to continue")
             guard verified else {
                 errorMessage = "User verification failed or was cancelled."
@@ -403,6 +414,14 @@ struct ContentView: View {
                 scannedMessage = "Registration completed successfully."
                 Logger.info("Registration completed successfully.")
                 errorMessage = nil
+
+                // Passkey Identity Creation
+                Logger.info("Creating passkey identity...")
+                savePasskeyIdentity(
+                    relyingPartyIdentifier: origin,
+                    userName: address,
+                    credentialID: rawId
+                )
 
                 startSignaling(origin: origin, requestId: requestId)
             }
@@ -658,11 +677,13 @@ private func getWalletInfo(origin: String) throws -> WalletInfo {
     guard let ed25519Wallet = XHDWalletAPI(seed: seed) else {
         throw NSError(domain: "Wallet creation failed", code: -1, userInfo: nil)
     }
-    let dp256 = DeterministicP256()
-    let derivedMainKey = try dp256.genDerivedMainKeyWithBIP39(phrase: phrase)
-    let p256KeyPair = dp256.genDomainSpecificKeyPair(derivedMainKey: derivedMainKey, origin: "https://\(origin)", userHandle: "tester")
+
     let pk = try ed25519Wallet.keyGen(context: KeyContext.Address, account: 0, change: 0, keyIndex: 0)
     let address = try Utility.encodeAddress(bytes: pk)
+
+    let dp256 = DeterministicP256()
+    let derivedMainKey = try dp256.genDerivedMainKeyWithBIP39(phrase: phrase)
+    let p256KeyPair = dp256.genDomainSpecificKeyPair(derivedMainKey: derivedMainKey, origin: "https://\(origin)", userHandle: address)
 
     return WalletInfo(
         ed25519Wallet: ed25519Wallet,
@@ -671,6 +692,27 @@ private func getWalletInfo(origin: String) throws -> WalletInfo {
         p256KeyPair: p256KeyPair,
         address: address
     )
+}
+
+private func savePasskeyIdentity(
+    relyingPartyIdentifier: String,
+    userName: String,
+    credentialID: Data
+) {
+    let passkeyIdentity = ASPasskeyCredentialIdentity(
+        relyingPartyIdentifier: relyingPartyIdentifier,
+        userName: userName,
+        credentialID: credentialID,
+        userHandle: Data(SHA256.hash(data: Data(userName.utf8)))
+    )
+
+    ASCredentialIdentityStore.shared.saveCredentialIdentities([passkeyIdentity]) { success, error in
+        if success {
+            Logger.info("✅ Passkey identity saved to identity store!")
+        } else if let error = error {
+            Logger.error("❌ Failed to save passkey identity: \(error)")
+        }
+    }
 }
 
 func requireUserVerification(reason: String = "Authenticate to continue") async -> Bool {
