@@ -578,12 +578,10 @@ struct ContentView: View {
             // Parse the response to check for errors
             if let responseJSON = try? JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any],
             let errorReason = responseJSON["error"] as? String {
-                // If an error exists, propagate it
                 Logger.error("Authentication failed: \(errorReason)")
                 errorMessage = "Authentication failed: \(errorReason)"
                 scannedMessage = nil
             } else {
-                // If no error, handle success
                 scannedMessage = "Authentication completed successfully."
                 Logger.info("Authentication completed successfully.")
                 errorMessage = nil
@@ -591,7 +589,6 @@ struct ContentView: View {
                 startSignaling(origin: origin, requestId: requestId)
             }
 
-        // Next step
         } catch {
             Logger.error("Error in authenticate: \(error)")
             errorMessage = "Failed to retrieve authentication options: \(error.localizedDescription)"
@@ -607,15 +604,27 @@ struct ContentView: View {
         let NODELY_TURN_CREDENTIAL = "sqmcP4MiTKMT4TGEDSk9jgHY"
 
         let iceServers = [
-            RTCIceServer(urlStrings: ["stun:stun.l.google.com:19302"]),
-            RTCIceServer(urlStrings: ["stun:stun1.l.google.com:19302"]),
-            RTCIceServer(urlStrings: ["stun:stun2.l.google.com:19302"]),
-            RTCIceServer(urlStrings: ["turn:global.turn.nodely.network:80?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
-            RTCIceServer(urlStrings: ["turns:global.turn.nodely.network:443?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
-            RTCIceServer(urlStrings: ["turn:eu.turn.nodely.io:80?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
-            RTCIceServer(urlStrings: ["turns:eu.turn.nodely.io:443?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
-            RTCIceServer(urlStrings: ["turn:us.turn.nodely.io:80?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
-            RTCIceServer(urlStrings: ["turns:us.turn.nodely.io:443?transport=tcp"],  username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
+            RTCIceServer(
+                urlStrings: [
+                    "stun:stun.l.google.com:19302",
+                    "stun:stun1.l.google.com:19302",
+                    "stun:stun2.l.google.com:19302",
+                    "stun:stun3.l.google.com:19302",
+                    "stun:stun4.l.google.com:19302"
+                ]
+            ),
+            RTCIceServer(
+                urlStrings: [
+                    "turn:global.turn.nodely.network:80?transport=tcp",
+                    "turns:global.turn.nodely.network:443?transport=tcp",
+                    "turn:eu.turn.nodely.io:80?transport=tcp",
+                    "turns:eu.turn.nodely.io:443?transport=tcp",
+                    "turn:us.turn.nodely.io:80?transport=tcp",
+                    "turns:us.turn.nodely.io:443?transport=tcp"
+                ],
+                username: NODELY_TURN_USERNAME,
+                credential: NODELY_TURN_CREDENTIAL
+            ),
         ]
         
         Task {
