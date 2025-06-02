@@ -260,6 +260,7 @@ class SignalClient {
                 Logger.error("Failed to set remote description: \(error)")
             } else {
                 Logger.debug("Remote description set successfully.")
+                self.processBufferedCandidates()
                 self.peerClient?.createAnswer { answer in
                     guard let answer = answer else {
                         Logger.error("Failed to create answer: Answer is nil")

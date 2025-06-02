@@ -11,7 +11,7 @@ import UserNotifications
 @main
 struct liquid_authApp: App {
     init() {
-        Logger.currentLevel = .info // or .debug, .error as needed
+        Logger.currentLevel = .debug // or .debug, .error as needed
         requestNotificationPermissions()
     }
 
