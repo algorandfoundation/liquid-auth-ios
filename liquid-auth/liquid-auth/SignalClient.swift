@@ -64,7 +64,7 @@ class SignalClient {
             onIceCandidate: { [weak self] candidate in
                 guard let self = self else { return }
                 Logger.debug("Generated ICE candidate: \(candidate)")
-                let candidateEvent = (type == "offer") ? "offer-candidate" : "answer-candidate"
+                let candidateEvent = (type == "offer") ? "answer-candidate" : "offer-candidate"
                 self.send(event: candidateEvent, data: [
                     "candidate": candidate.sdp,
                     "sdpMid": candidate.sdpMid ?? "",
