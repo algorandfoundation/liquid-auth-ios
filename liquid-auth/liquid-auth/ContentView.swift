@@ -728,6 +728,21 @@ private func handleArc27Message(_ message: String, ed25519Wallet: XHDWalletAPI) 
         return nil
     }
 
+    // Verify user identity
+    var userVerified = false
+    let semaphore = DispatchSemaphore(value: 0)
+    DispatchQueue.main.async {
+        Task {
+            userVerified = await requireUserVerification(reason: "Approve transaction signing")
+            semaphore.signal()
+        }
+    }
+    semaphore.wait()
+    guard userVerified else {
+        Logger.error("User verification failed or cancelled.")
+        return nil
+    }
+
     // 3. Sign each transaction
     var signedTxns: [String] = []
     for txnObj in txns {
