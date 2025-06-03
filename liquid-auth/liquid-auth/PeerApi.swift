@@ -7,15 +7,18 @@ class PeerApi {
     private var peerConnectionDelegate: PeerConnectionDelegate?
     private var dataChannel: RTCDataChannel?
     private let onDataChannel: (RTCDataChannel) -> Void
-    private var dataChannelDelegates: [RTCDataChannel: DataChannelDelegate] = [:] // Add this
+    private var dataChannelDelegates: [RTCDataChannel: DataChannelDelegate] = [:]
+    private weak var signalService: SignalService?
 
 
     init(
         iceServers: [RTCIceServer],
         poolSize: Int,
+        signalService: SignalService?,
         onDataChannel: @escaping (RTCDataChannel) -> Void,
         onIceCandidate: @escaping (RTCIceCandidate) -> Void
         ){
+        self.signalService = signalService
         self.onDataChannel = onDataChannel
         // Initialize the PeerConnectionFactory
         RTCPeerConnectionFactory.initialize()
@@ -33,15 +36,6 @@ class PeerApi {
                 onDataChannel: onDataChannel,
                 onConnectionStateChange: { state in
                     Logger.debug("PeerAPI: Peer connection state changed: \(state.rawValue)")
-                    if state == .connected {
-                        Logger.debug("PeerAPI: Retrying data channel creation...")
-                        let dataChannel = self.peerConnection?.dataChannel(forLabel: "liquid", configuration: RTCDataChannelConfiguration())
-                        if let dataChannel = dataChannel {
-                            Logger.debug("PeerAPI: Data channel created successfully on retry: \(dataChannel.label)")
-                        } else {
-                            Logger.error("PeerAPI: Failed to create data channel on retry.")
-                        }
-                    }
                 }
             )
 
@@ -166,6 +160,7 @@ class PeerApi {
 
         if let dataChannel = self.dataChannel {
             let delegate = DataChannelDelegate(
+                signalService: signalService,
                 onMessage: onMessage,
                 onStateChange: onStateChange
             )
@@ -183,6 +178,7 @@ class PeerApi {
         onBufferedAmountChange: ((UInt64) -> Void)? = nil
     ) -> RTCDataChannelDelegate {
         return DataChannelDelegate(
+            signalService: signalService,
             onMessage: onMessage,
             onStateChange: { state in
                 onStateChange?(state) // Safely call the optional closure

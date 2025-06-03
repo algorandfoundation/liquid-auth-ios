@@ -1,6 +1,6 @@
 //
-//  liquid_auth_iosApp.swift
-//  liquid-auth-ios
+//  liquid_authApp.swift
+//  liquid-auth
 //
 //  Created by Algorand Foundation on 2025-04-11.
 //
@@ -9,7 +9,7 @@ import SwiftUI
 import UserNotifications
 
 @main
-struct liquid_auth_iosApp: App {
+struct liquid_authApp: App {
     init() {
         Logger.currentLevel = .debug // or .debug, .error as needed
         requestNotificationPermissions()

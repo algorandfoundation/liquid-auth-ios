@@ -7,6 +7,7 @@ import CryptoKit
 import deterministicP256_swift
 import WebRTC
 import LocalAuthentication
+import AuthenticationServices
 
 import Foundation
 
@@ -258,6 +259,16 @@ struct ContentView: View {
                 isLoading = false
             }
 
+            let state = await ASCredentialIdentityStore.shared.state()
+            if !state.isEnabled {
+                DispatchQueue.main.async {
+                    self.scannedMessage = nil
+                    self.errorMessage = "AutoFill Passwords & Passkeys is not enabled for Liquid Auth. Please enable it in Settings > General > AutoFill & Passwords."
+                    self.isLoading = false
+                }
+                return
+            }
+
             let verified = await requireUserVerification(reason: "Please verify your identity to continue")
             guard verified else {
                 errorMessage = "User verification failed or was cancelled."
@@ -403,6 +414,14 @@ struct ContentView: View {
                 scannedMessage = "Registration completed successfully."
                 Logger.info("Registration completed successfully.")
                 errorMessage = nil
+
+                // Passkey Identity Creation
+                Logger.info("Creating passkey identity...")
+                savePasskeyIdentity(
+                    relyingPartyIdentifier: origin,
+                    userName: address,
+                    credentialID: rawId
+                )
 
                 startSignaling(origin: origin, requestId: requestId, walletInfo: walletInfo)
             }
@@ -559,12 +578,10 @@ struct ContentView: View {
             // Parse the response to check for errors
             if let responseJSON = try? JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any],
             let errorReason = responseJSON["error"] as? String {
-                // If an error exists, propagate it
                 Logger.error("Authentication failed: \(errorReason)")
                 errorMessage = "Authentication failed: \(errorReason)"
                 scannedMessage = nil
             } else {
-                // If no error, handle success
                 scannedMessage = "Authentication completed successfully."
                 Logger.info("Authentication completed successfully.")
                 errorMessage = nil
@@ -572,7 +589,6 @@ struct ContentView: View {
                 startSignaling(origin: origin, requestId: requestId, walletInfo: walletInfo)
             }
 
-        // Next step
         } catch {
             Logger.error("Error in authenticate: \(error)")
             errorMessage = "Failed to retrieve authentication options: \(error.localizedDescription)"
@@ -588,15 +604,27 @@ struct ContentView: View {
         let NODELY_TURN_CREDENTIAL = "sqmcP4MiTKMT4TGEDSk9jgHY"
 
         let iceServers = [
-            RTCIceServer(urlStrings: ["stun:stun.l.google.com:19302"]),
-            RTCIceServer(urlStrings: ["stun:stun1.l.google.com:19302"]),
-            RTCIceServer(urlStrings: ["stun:stun2.l.google.com:19302"]),
-            RTCIceServer(urlStrings: ["turn:global.turn.nodely.network:80?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
-            RTCIceServer(urlStrings: ["turns:global.turn.nodely.network:443?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
-            RTCIceServer(urlStrings: ["turn:eu.turn.nodely.io:80?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
-            RTCIceServer(urlStrings: ["turns:eu.turn.nodely.io:443?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
-            RTCIceServer(urlStrings: ["turn:us.turn.nodely.io:80?transport=tcp"], username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
-            RTCIceServer(urlStrings: ["turns:us.turn.nodely.io:443?transport=tcp"],  username: NODELY_TURN_USERNAME, credential: NODELY_TURN_CREDENTIAL),
+            RTCIceServer(
+                urlStrings: [
+                    "stun:stun.l.google.com:19302",
+                    "stun:stun1.l.google.com:19302",
+                    "stun:stun2.l.google.com:19302",
+                    "stun:stun3.l.google.com:19302",
+                    "stun:stun4.l.google.com:19302"
+                ]
+            ),
+            RTCIceServer(
+                urlStrings: [
+                    "turn:global.turn.nodely.network:80?transport=tcp",
+                    "turns:global.turn.nodely.network:443?transport=tcp",
+                    "turn:eu.turn.nodely.io:80?transport=tcp",
+                    "turns:eu.turn.nodely.io:443?transport=tcp",
+                    "turn:us.turn.nodely.io:80?transport=tcp",
+                    "turns:us.turn.nodely.io:443?transport=tcp"
+                ],
+                username: NODELY_TURN_USERNAME,
+                credential: NODELY_TURN_CREDENTIAL
+            ),
         ]
         
         Task {
@@ -627,6 +655,7 @@ struct ContentView: View {
                 onStateChange: { state in
                     if state == "open" {
                         Logger.info("✅ Data channel is OPEN")
+                        signalService.sendMessage("ping")
                     }
                 }
             )
@@ -662,11 +691,13 @@ private func getWalletInfo(origin: String) throws -> WalletInfo {
     guard let ed25519Wallet = XHDWalletAPI(seed: seed) else {
         throw NSError(domain: "Wallet creation failed", code: -1, userInfo: nil)
     }
-    let dp256 = DeterministicP256()
-    let derivedMainKey = try dp256.genDerivedMainKeyWithBIP39(phrase: phrase)
-    let p256KeyPair = dp256.genDomainSpecificKeyPair(derivedMainKey: derivedMainKey, origin: "https://\(origin)", userHandle: "tester")
+
     let pk = try ed25519Wallet.keyGen(context: KeyContext.Address, account: 0, change: 0, keyIndex: 0)
     let address = try Utility.encodeAddress(bytes: pk)
+
+    let dp256 = DeterministicP256()
+    let derivedMainKey = try dp256.genDerivedMainKeyWithBIP39(phrase: phrase)
+    let p256KeyPair = dp256.genDomainSpecificKeyPair(derivedMainKey: derivedMainKey, origin: "https://\(origin)", userHandle: address)
 
     return WalletInfo(
         ed25519Wallet: ed25519Wallet,
@@ -726,7 +757,7 @@ private func handleArc27Message(_ message: String, ed25519Wallet: XHDWalletAPI) 
         "requestId": requestId,
         "result": [
             "providerId": params["providerId"] ?? "liquid-auth-ios",
-            "signedTxns": signedTxns
+            "stxns": signedTxns
         ]
     ]
 
@@ -737,6 +768,27 @@ private func handleArc27Message(_ message: String, ed25519Wallet: XHDWalletAPI) 
     }
     let base64urlResponse = Data(cborResponse).base64URLEncodedString()
     return base64urlResponse
+}
+
+private func savePasskeyIdentity(
+    relyingPartyIdentifier: String,
+    userName: String,
+    credentialID: Data
+) {
+    let passkeyIdentity = ASPasskeyCredentialIdentity(
+        relyingPartyIdentifier: relyingPartyIdentifier,
+        userName: userName,
+        credentialID: credentialID,
+        userHandle: Data(SHA256.hash(data: Data(userName.utf8)))
+    )
+
+    ASCredentialIdentityStore.shared.saveCredentialIdentities([passkeyIdentity]) { success, error in
+        if success {
+            Logger.info("✅ Passkey identity saved to identity store!")
+        } else if let error = error {
+            Logger.error("❌ Failed to save passkey identity: \(error)")
+        }
+    }
 }
 
 func requireUserVerification(reason: String = "Authenticate to continue") async -> Bool {

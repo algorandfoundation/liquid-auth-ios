@@ -77,16 +77,19 @@ class SignalService {
                 type: type,
                 iceServers: iceServers,
                 onDataChannelOpen: { [weak self] dataChannel in
+                    Logger.debug("SignalService: onDataChannelOpen called with: \(dataChannel.label)")
                     self?.dataChannel = dataChannel
                     Logger.debug("Data channel is open and ready: \(dataChannel.label)")
-                    self?.flushMessageQueue()
-                },
-                onMessage: { [weak self] message in
-                    // Set dataChannel if not already set
-                    if let peerClient = self?.signalClient?.peerClient,
-                       let dc = peerClient.peerConnection?.dataChannel(forLabel: "liquid", configuration: RTCDataChannelConfiguration()) {
-                        self?.dataChannel = dc
+                    if dataChannel.readyState == .open {
+                        self?.flushMessageQueue()
+                        for i in 0..<10 {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.5) {
+                                self?.sendMessage("ping")
+                            }
+                        }
                     }
+                },
+                onMessage: { message in
                     onMessage(message)
                 },
                 onStateChange: onStateChange
@@ -111,7 +114,8 @@ class SignalService {
 
     // MARK: - Send a message through the data channel
     func sendMessage(_ message: String) {
-        if let dataChannel = dataChannel {
+        if let dataChannel = dataChannel, dataChannel.readyState == .open {
+            Logger.debug("SignalService: Sending on channel to \(ObjectIdentifier(dataChannel)) label: \(dataChannel.label)")
             let buffer = RTCDataBuffer(data: message.data(using: .utf8)!, isBinary: false)
             dataChannel.sendData(buffer)
             Logger.info("Message sent: \(message)")

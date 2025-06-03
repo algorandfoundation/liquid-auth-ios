@@ -1,13 +1,13 @@
 //
-//  liquid_auth_iosUITests.swift
-//  liquid-auth-iosUITests
+//  liquid_authUITests.swift
+//  liquid-authUITests
 //
 //  Created by Yared Efrem Afework on 2025-04-11.
 //
 
 import XCTest
 
-final class liquid_auth_iosUITests: XCTestCase {
+final class liquid_authUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.

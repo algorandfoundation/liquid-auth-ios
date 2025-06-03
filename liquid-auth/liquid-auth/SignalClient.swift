@@ -43,28 +43,45 @@ class SignalClient {
         peerClient = PeerApi(
             iceServers: iceServers,
             poolSize: 10,
+            signalService: service,
             onDataChannel: { [weak self] dataChannel in
+                Logger.debug("SignalClient: onDataChannel called with: \(dataChannel.label)")
                 Logger.debug("Received data channel from remote peer: \(dataChannel.label)")
                 let delegate = DataChannelDelegate(
+                    signalService: self?.service,
                     onMessage: { message in
                         Logger.info("💬 SignalClient: Received message: \(message)")
+                        onMessage(message)
                     },
                     onStateChange: { state in
-                        Logger.debug("Data channel state changed: \(state ?? "unknown")")
+                        Logger.debug("SignalClient: Data channel state changed: \(state ?? "unknown")")
                         if state == "open" {
                             Logger.info("✅ SignalClient: Open and ready: \(dataChannel.label)")
+                            Logger.debug("SignalService: Setting dataChannel to \(ObjectIdentifier(dataChannel)) label: \(dataChannel.label)")
                             onDataChannelOpen(dataChannel)
+                        }
+                    },
+                    onChannelAvailable: { [weak self] channel in
+                        if self?.service?.dataChannel !== channel {
+                            Logger.debug("SignalClient: Setting dataChannel from didReceiveMessageWith: \(ObjectIdentifier(channel))")
+                            self?.service?.dataChannel = channel
                         }
                     }
                 )
                 dataChannel.delegate = delegate
                 self?.dataChannelDelegates[dataChannel] = delegate
                 Logger.debug("SignalClient: DataChannelDelegate assigned to remote data channel: \(dataChannel.label)")
+
+                if dataChannel.readyState == .open {
+                    Logger.info("✅ SignalClient: Open and ready (immediate): \(dataChannel.label)")
+                    Logger.debug("SignalService: Setting dataChannel to \(ObjectIdentifier(dataChannel)) label: \(dataChannel.label)")
+                    onDataChannelOpen(dataChannel)
+                }
             },
             onIceCandidate: { [weak self] candidate in
                 guard let self = self else { return }
                 Logger.debug("Generated ICE candidate: \(candidate)")
-                let candidateEvent = (type == "offer") ? "offer-candidate" : "answer-candidate"
+                let candidateEvent = (type == "offer") ? "answer-candidate" : "offer-candidate"
                 self.send(event: candidateEvent, data: [
                     "candidate": candidate.sdp,
                     "sdpMid": candidate.sdpMid ?? "",
@@ -148,11 +165,10 @@ class SignalClient {
                         }
                     }
                 })
-            }
+            }   
+            return nil
         }
-
-        // Return the data channel if available (initiator)
-        return peerClient?.peerConnection?.dataChannel(forLabel: "liquid", configuration: RTCDataChannelConfiguration())
+        return nil
     }
 
     // MARK: - Connect to the Socket.IO Server
@@ -260,6 +276,7 @@ class SignalClient {
                 Logger.error("Failed to set remote description: \(error)")
             } else {
                 Logger.debug("Remote description set successfully.")
+                self.processBufferedCandidates()
                 self.peerClient?.createAnswer { answer in
                     guard let answer = answer else {
                         Logger.error("Failed to create answer: Answer is nil")
