@@ -172,21 +172,6 @@ class PeerApi {
         return self.dataChannel
     }
 
-    func createDataChannelObserver(
-        onMessage: @escaping (String) -> Void,
-        onStateChange: ((String?) -> Void)? = nil,
-        onBufferedAmountChange: ((UInt64) -> Void)? = nil
-    ) -> RTCDataChannelDelegate {
-        return DataChannelDelegate(
-            signalService: signalService,
-            onMessage: onMessage,
-            onStateChange: { state in
-                onStateChange?(state) // Safely call the optional closure
-            },
-            onBufferedAmountChange: onBufferedAmountChange
-        )
-    }
-
     // Send a message through the Data Channel
     func send(_ message: String) {
         guard let dataChannel = dataChannel else {

@@ -416,12 +416,6 @@ class SignalClient {
         eventQueue.removeAll()
     }
 
-    func link(requestId: String) {
-        socket.emit("link", ["requestId": requestId]) {
-            Logger.debug("Link request emitted successfully.")
-        }
-    }
-
     func generateQRCode(from string: String) -> UIImage? {
         let data = string.data(using: .ascii)
         guard let filter = CIFilter(name: "CIQRCodeGenerator") else { return nil }
