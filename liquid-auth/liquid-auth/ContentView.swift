@@ -640,6 +640,7 @@ struct ContentView: View {
                     
                     if let decoded = Utility.decodeBase64UrlCBORIfPossible(message) {
                         displayMessage = "Decoded: \(decoded)"
+                        Logger.info("Decoded message: \(decoded)")
                     } else {
                         displayMessage = message
                     }
@@ -736,10 +737,18 @@ private func handleArc27Message(_ message: String, ed25519Wallet: XHDWalletAPI) 
             continue
         }
 
+        // TODO: Handle different transaction types if needed
+        // Handle using a Swift-based Algorand SDK
+        let prefix = Data([0x54, 0x58]) // "TX"
+        let bytesToSign = prefix + txnBytes
+
+        Logger.debug("Signing transaction: \(txnBase64Url)")
+        Logger.debug("Signing transaction: \(bytesToSign.map { String(format: "%02hhx", $0) }.joined())")
+
         // Sign the transaction bytes with Ed25519
         guard let signature = try? ed25519Wallet.rawSign(
             bip44Path: [UInt32(0x8000_0000) + 44, UInt32(0x8000_0000) + 283, UInt32(0x8000_0000) + 0, 0, 0],
-            message: txnBytes,
+            message: bytesToSign,
             derivationType: BIP32DerivationType.Peikert
         ) else {
             Logger.error("Failed to sign transaction")
