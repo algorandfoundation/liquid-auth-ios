@@ -1,49 +1,25 @@
-//
-//  CredentialProviderViewController.swift
-//  Liquid Auth
-//
-//  Created by Algorand Foundation on 2025-05-27.
-//
-
 import AuthenticationServices
-import SwiftUI
+import UIKit
 
 class CredentialProviderViewController: ASCredentialProviderViewController {
-    // Store the incoming service identifiers for use in SwiftUI
-    var serviceIdentifiers: [ASCredentialServiceIdentifier] = []
-
-    // The SwiftUI view controller
-    private var hostingController: UIHostingController<CredentialListView>?
-
-    override func prepareCredentialList(for serviceIdentifiers: [ASCredentialServiceIdentifier]) {
-        self.serviceIdentifiers = serviceIdentifiers
-
-        // Print out the incoming credential requests
-        for identifier in serviceIdentifiers {
-            print("Credential request for: \(identifier.identifier) (type: \(identifier.type.rawValue))")
-        }
-
-        // Show the SwiftUI view
-        let view = CredentialListView(serviceIdentifiers: serviceIdentifiers, onCancel: { [weak self] in
-            self?.extensionContext.cancelRequest(withError: NSError(domain: ASExtensionErrorDomain, code: ASExtensionError.userCanceled.rawValue))
+    // Called for passkey creation (registration)
+    override func prepareInterface(forPasskeyRegistration request: ASCredentialRequest) {
+        let alert = UIAlertController(title: "Liquid Auth", message: "Passkey Registration UI", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+            // You would create your passkey credential here and call completeRegistrationRequest
+            self.extensionContext.cancelRequest(withError: NSError(domain: ASExtensionErrorDomain, code: ASExtensionError.userCanceled.rawValue))
         })
-        if let hostingController = hostingController {
-            hostingController.rootView = view
-        } else {
-            let hc = UIHostingController(rootView: view)
-            self.hostingController = hc
-            self.present(hc, animated: true, completion: nil)
-        }
+        self.present(alert, animated: true, completion: nil)
     }
 
-    // Required for QuickType bar (not used in MVP)
-    override func provideCredentialWithoutUserInteraction(for credentialIdentity: ASPasswordCredentialIdentity) {
-        // No credentials to provide in MVP
-        self.extensionContext.cancelRequest(withError: NSError(domain: ASExtensionErrorDomain, code: ASExtensionError.userCanceled.rawValue))
-    }
-
-    // Optional: handle cancel from UI
-    @IBAction func cancel(_ sender: AnyObject?) {
-        self.extensionContext.cancelRequest(withError: NSError(domain: ASExtensionErrorDomain, code: ASExtensionError.userCanceled.rawValue))
+    // Called for passkey assertion (sign-in)
+    override func prepareInterfaceToProvideCredential(for request: ASCredentialRequest) {
+        let alert = UIAlertController(title: "Liquid Auth", message: "Passkey Sign-in UI", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+            // You would provide your passkey credential here and call completeRequest
+            self.extensionContext.cancelRequest(withError: NSError(domain: ASExtensionErrorDomain, code: ASExtensionError.userCanceled.rawValue))
+        })
+        self.present(alert, animated: true, completion: nil)
     }
 }
+// foundation.algorand.liquid-auth.Liquid-Auth
