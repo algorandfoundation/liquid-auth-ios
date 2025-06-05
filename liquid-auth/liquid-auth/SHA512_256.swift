@@ -1,6 +1,6 @@
 //
 //  CryptoUtility.swift
-//  liquid-auth-ios
+//  liquid-auth
 //
 //  Created by Yared Efrem Afework on 2025-04-26.
 //

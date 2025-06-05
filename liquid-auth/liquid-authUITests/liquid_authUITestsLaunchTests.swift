@@ -1,13 +1,13 @@
 //
-//  liquid_auth_iosUITestsLaunchTests.swift
-//  liquid-auth-iosUITests
+//  liquid_authUITestsLaunchTests.swift
+//  liquid-authUITests
 //
 //  Created by Yared Efrem Afework on 2025-04-11.
 //
 
 import XCTest
 
-final class liquid_auth_iosUITestsLaunchTests: XCTestCase {
+final class liquid_authUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

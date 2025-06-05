@@ -1,16 +1,17 @@
 //
-//  liquid_auth_iosApp.swift
-//  liquid-auth-ios
+//  liquid_authApp.swift
+//  liquid-auth
 //
-//  Created by Yared Efrem Afework on 2025-04-11.
+//  Created by Algorand Foundation on 2025-04-11.
 //
 
 import SwiftUI
 import UserNotifications
 
 @main
-struct liquid_auth_iosApp: App {
+struct liquid_authApp: App {
     init() {
+        Logger.currentLevel = .debug // or .debug, .error as needed
         requestNotificationPermissions()
     }
 
@@ -24,11 +25,11 @@ struct liquid_auth_iosApp: App {
         let notificationCenter = UNUserNotificationCenter.current()
         notificationCenter.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if let error = error {
-                print("Failed to request notification permissions: \(error)")
+                Logger.error("Failed to request notification permissions: \(error)")
             } else if granted {
-                print("Notification permissions granted.")
+                Logger.debug("Notification permissions granted.")
             } else {
-                print("Notification permissions denied.")
+                Logger.error("Notification permissions denied.")
             }
         }
     }

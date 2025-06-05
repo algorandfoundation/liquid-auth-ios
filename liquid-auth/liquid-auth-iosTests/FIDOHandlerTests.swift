@@ -1,5 +1,5 @@
 import XCTest
-@testable import liquid_auth_ios
+@testable import liquid_auth
 
 final class FIDOHandlerTests: XCTestCase {
     func testDecodeFIDOURI() {
