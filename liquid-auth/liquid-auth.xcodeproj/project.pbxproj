@@ -9,6 +9,12 @@
 /* Begin PBXBuildFile section */
 		6E0A054F2DC77745004A74E2 /* deterministicP256-swift in Frameworks */ = {isa = PBXBuildFile; productRef = 6E0A054E2DC77745004A74E2 /* deterministicP256-swift */; };
 		6E0A05A02DCA3132004A74E2 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = 6E0A059F2DCA3132004A74E2 /* SocketIO */; };
+		6E0F0F402DF6B382002035B7 /* SwiftCBOR in Frameworks */ = {isa = PBXBuildFile; productRef = 6E0F0F3F2DF6B382002035B7 /* SwiftCBOR */; };
+		6E0F0F422DF6B382002035B7 /* WebRTC in Frameworks */ = {isa = PBXBuildFile; productRef = 6E0F0F412DF6B382002035B7 /* WebRTC */; };
+		6E0F0F442DF6B382002035B7 /* MnemonicSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 6E0F0F432DF6B382002035B7 /* MnemonicSwift */; };
+		6E0F0F462DF6B382002035B7 /* Base32 in Frameworks */ = {isa = PBXBuildFile; productRef = 6E0F0F452DF6B382002035B7 /* Base32 */; };
+		6E0F0F482DF6B382002035B7 /* x-hd-wallet-api in Frameworks */ = {isa = PBXBuildFile; productRef = 6E0F0F472DF6B382002035B7 /* x-hd-wallet-api */; };
+		6E0F0F4A2DF6B382002035B7 /* deterministicP256-swift in Frameworks */ = {isa = PBXBuildFile; productRef = 6E0F0F492DF6B382002035B7 /* deterministicP256-swift */; };
 		6E97FCC52DC0CD35006224B5 /* x-hd-wallet-api in Frameworks */ = {isa = PBXBuildFile; productRef = 6E97FCC42DC0CD35006224B5 /* x-hd-wallet-api */; };
 		6EB1BFFC2DE6105800D2CD0F /* AuthenticationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6EB1BFFB2DE6105700D2CD0F /* AuthenticationServices.framework */; };
 		6EB1C0072DE6105800D2CD0F /* Liquid Auth.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6EB1BFFA2DE6105700D2CD0F /* Liquid Auth.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -133,6 +139,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6E0F0F462DF6B382002035B7 /* Base32 in Frameworks */,
+				6E0F0F482DF6B382002035B7 /* x-hd-wallet-api in Frameworks */,
+				6E0F0F442DF6B382002035B7 /* MnemonicSwift in Frameworks */,
+				6E0F0F4A2DF6B382002035B7 /* deterministicP256-swift in Frameworks */,
+				6E0F0F402DF6B382002035B7 /* SwiftCBOR in Frameworks */,
+				6E0F0F422DF6B382002035B7 /* WebRTC in Frameworks */,
 				6EB1BFFC2DE6105800D2CD0F /* AuthenticationServices.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -268,6 +280,12 @@
 			);
 			name = "Liquid Auth";
 			packageProductDependencies = (
+				6E0F0F3F2DF6B382002035B7 /* SwiftCBOR */,
+				6E0F0F412DF6B382002035B7 /* WebRTC */,
+				6E0F0F432DF6B382002035B7 /* MnemonicSwift */,
+				6E0F0F452DF6B382002035B7 /* Base32 */,
+				6E0F0F472DF6B382002035B7 /* x-hd-wallet-api */,
+				6E0F0F492DF6B382002035B7 /* deterministicP256-swift */,
 			);
 			productName = "Liquid Auth";
 			productReference = 6EB1BFFA2DE6105700D2CD0F /* Liquid Auth.appex */;
@@ -675,6 +693,7 @@
 				INFOPLIST_FILE = "Liquid Auth/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Liquid Auth";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -701,6 +720,7 @@
 				INFOPLIST_FILE = "Liquid Auth/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Liquid Auth";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -835,6 +855,36 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6E0A059E2DCA3132004A74E2 /* XCRemoteSwiftPackageReference "socket" */;
 			productName = SocketIO;
+		};
+		6E0F0F3F2DF6B382002035B7 /* SwiftCBOR */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6EE537972DAE74A10032EC12 /* XCRemoteSwiftPackageReference "SwiftCBOR" */;
+			productName = SwiftCBOR;
+		};
+		6E0F0F412DF6B382002035B7 /* WebRTC */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6EE537D72DAFA7540032EC12 /* XCRemoteSwiftPackageReference "WebRTC" */;
+			productName = WebRTC;
+		};
+		6E0F0F432DF6B382002035B7 /* MnemonicSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6EE537E72DBD631D0032EC12 /* XCRemoteSwiftPackageReference "MnemonicSwift" */;
+			productName = MnemonicSwift;
+		};
+		6E0F0F452DF6B382002035B7 /* Base32 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6EE537F12DBD64D80032EC12 /* XCRemoteSwiftPackageReference "Base32" */;
+			productName = Base32;
+		};
+		6E0F0F472DF6B382002035B7 /* x-hd-wallet-api */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6ECF13E52DBEBA73006E0BE0 /* XCRemoteSwiftPackageReference "xHD-Wallet-API-swift" */;
+			productName = "x-hd-wallet-api";
+		};
+		6E0F0F492DF6B382002035B7 /* deterministicP256-swift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6E0A054D2DC77745004A74E2 /* XCRemoteSwiftPackageReference "deterministic-P256-swift" */;
+			productName = "deterministicP256-swift";
 		};
 		6E97FCC42DC0CD35006224B5 /* x-hd-wallet-api */ = {
 			isa = XCSwiftPackageProductDependency;
