@@ -3,26 +3,29 @@ import AuthenticationServices
 
 struct CredentialListView: View {
     let serviceIdentifiers: [ASCredentialServiceIdentifier]
+    let credentials: [Credential]
     let onCancel: () -> Void
+    let onProvide: (Credential) -> Void
 
     var body: some View {
         NavigationView {
             VStack {
-                Text("Credential Request")
+                Text("Select a Credential")
                     .font(.title)
                     .padding(.top)
-                if serviceIdentifiers.isEmpty {
-                    Text("No service identifiers received.")
+                if credentials.isEmpty {
+                    Text("No credentials available.")
                         .foregroundColor(.secondary)
                         .padding()
                 } else {
-                    List(serviceIdentifiers, id: \.identifier) { identifier in
-                        VStack(alignment: .leading) {
-                            Text(identifier.identifier)
-                                .font(.headline)
-                            Text("Type: \(identifier.type.rawValue)")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                    List(credentials) { credential in
+                        Button(action: {
+                            onProvide(credential)
+                        }) {
+                            VStack(alignment: .leading) {
+                                Text(credential.username)
+                                    .font(.headline)
+                            }
                         }
                     }
                 }
@@ -35,4 +38,10 @@ struct CredentialListView: View {
             .navigationTitle("Liquid Auth")
         }
     }
+}
+
+struct Credential: Identifiable {
+    let id: UUID = UUID()
+    let username: String
+    let password: String
 }
