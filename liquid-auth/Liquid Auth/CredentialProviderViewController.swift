@@ -1,58 +1,87 @@
 import AuthenticationServices
-import UIKit
 import CryptoKit
 import deterministicP256_swift
 import LocalAuthentication
-import x_hd_wallet_api
 import MnemonicSwift
 import SwiftCBOR
+import UIKit
+import x_hd_wallet_api
 
 class CredentialProviderViewController: ASCredentialProviderViewController {
     // Registration flow
     override func prepareInterface(forPasskeyRegistration request: ASCredentialRequest) {
-        guard let passkeyRequest = request as? ASPasskeyCredentialRequest else { return }
-        Task {
-            // 1. Always get user consent first
-            let consent = await presentUserConsentAlert(
-                title: "Register Passkey",
-                message: "Do you want to register a new passkey for this site?"
-            )
-            guard consent else {
-                self.extensionContext.cancelRequest(withError: NSError(domain: "User cancelled", code: -1))
-                return
-            }
-            do {
-                // 2. Only after consent, check for excluded credentials
-                let credential = try await createRegistrationCredential(for: passkeyRequest)
-                self.completeRegistrationRequest(credential)//, userHandle: passkeyRequest.credentialIdentity.user)
-            } catch let error as NSError {
-                // 3. If error is due to excluded credential, delay before returning
-                if error.domain == "Credential already exists for this site" {
-                    try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+        if #available(iOSApplicationExtension 17.0, *) {
+            guard let passkeyRequest = request as? ASPasskeyCredentialRequest else { return }
+            Task {
+                let consent = await presentUserConsentAlert(
+                    title: "Register Passkey",
+                    message: "Do you want to register a new passkey for this site?"
+                )
+                guard consent else {
+                    self.extensionContext.cancelRequest(withError: NSError(domain: "User cancelled", code: -1))
+                    return
                 }
-                self.extensionContext.cancelRequest(withError: error)
+                do {
+                    let credential = try await createRegistrationCredential(for: passkeyRequest)
+                    self.completeRegistrationRequest(credential, userHandle: passkeyRequest.credentialIdentity.user)
+                } catch let error as NSError {
+                    // If error is due to excluded credential, delay before returning
+                    if error.domain == "Credential already exists for this site" {
+                        try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                    }
+                    self.extensionContext.cancelRequest(withError: error)
+                }
             }
+        } else {
+            extensionContext.cancelRequest(withError: NSError(domain: "Passkeys require iOS 17+", code: -1))
         }
     }
 
     // Authentication flow
     override func prepareInterfaceToProvideCredential(for request: ASCredentialRequest) {
-        guard let passkeyRequest = request as? ASPasskeyCredentialRequest else { return }
-        Task {
-            let consent = await presentUserConsentAlert(
-                title: "Use Passkey",
-                message: "Do you want to use your passkey to sign in?"
-            )
-            guard consent else {
-                self.extensionContext.cancelRequest(withError: NSError(domain: "User cancelled", code: -1))
-                return
+        if #available(iOSApplicationExtension 17.0, *) {
+            guard let passkeyRequest = request as? ASPasskeyCredentialRequest,
+                  let credentialIdentity = passkeyRequest.credentialIdentity as? ASPasskeyCredentialIdentity else { return }
+            Task {
+                let consent = await presentUserConsentAlert(
+                    title: "Use Passkey",
+                    message: "Do you want to use your passkey to sign in?"
+                )
+                guard consent else {
+                    self.extensionContext.cancelRequest(withError: NSError(domain: "User cancelled", code: -1))
+                    return
+                }
+                do {
+                    let credential: ASPasskeyAssertionCredential = try await createAssertionCredential(for: passkeyRequest)
+                    self.completeAssertionRequest(credential)
+                } catch {
+                    self.extensionContext.cancelRequest(withError: error)
+                }
             }
-            do {
-                let credential = try await createAssertionCredential(for: passkeyRequest)
-                self.completeAssertionRequest(credential)
-            } catch {
-                self.extensionContext.cancelRequest(withError: error)
+        } else {
+            extensionContext.cancelRequest(withError: NSError(domain: "Passkeys require iOS 17+", code: -1))
+        }
+    }
+
+    func provideCredentialWithoutUserInteraction(for credentialIdentity: ASPasskeyCredentialIdentity) {
+        if #available(iOSApplicationExtension 17.0, *) {
+            // This method is called when the system needs to provide a credential without user interaction.
+            // It can be used for automatic sign-in or other scenarios where user interaction is not required.
+            Task {
+                let isRegistered = await isCredentialIdentityRegistered(credentialIdentity)
+                guard isRegistered else {
+                    self.extensionContext.cancelRequest(withError: NSError(domain: "Credential not registered", code: -1))
+                    return
+                }
+                do {
+                    let credential = try await createAssertionCredential(for: credentialIdentity)
+                    self.completeAssertionRequest(credential)
+                } catch {
+                    self.extensionContext.cancelRequest(withError: error)
+                }
             }
+        } else {
+            extensionContext.cancelRequest(withError: NSError(domain: "Passkeys require iOS 17+", code: -1))
         }
     }
 
@@ -84,15 +113,15 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
         }
     }
 
-    func completeRegistrationRequest(_ credential: ASPasskeyRegistrationCredential){//, userHandle: String) {
+    func completeRegistrationRequest(_ credential: ASPasskeyRegistrationCredential, userHandle: String) {
         extensionContext.completeRegistrationRequest(using: credential)
         // Save the credential identity after successful registration
-        // savePasskeyIdentity(
-        //     relyingPartyIdentifier: credential.relyingParty,
-        //     userName: userHandle,
-        //     credentialID: credential.credentialID,
-        //     userHandle: Data(userHandle.utf8)
-        // )
+        savePasskeyIdentity(
+            relyingPartyIdentifier: credential.relyingParty,
+            userName: userHandle,
+            credentialID: credential.credentialID,
+            userHandle: Data(userHandle.utf8)
+        )
     }
 
     func completeAssertionRequest(_ credential: ASPasskeyAssertionCredential) {
@@ -115,25 +144,25 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
         let credentialIdentityID = credentialIdentity.credentialID.base64EncodedString()
         let excludeList = request.excludedCredentials?.map { $0.credentialID.base64EncodedString() }.joined(separator: ", ") ?? "none"
 
-        // await presentDebugAlert(
-        //     title: "Passkey Request Info",
-        //     message: """
-        //     supportedAlgorithms: \(supportedAlgs)
-        //     userVerificationPreference: \(userVerification)
-        //     clientDataHash: \(clientDataHashHex)
-        //     relyingPartyIdentifier: \(rpId)
-        //     userName: \(userName)
-        //     userHandle: \(userHandle)
-        //     credentialID(Identity): \(credentialIdentityID)
-        //     excludedCredentials: \(excludeList)
-        //     """
-        //     )
+        await presentDebugAlert(
+            title: "Passkey Request Info",
+            message: """
+            supportedAlgorithms: \(supportedAlgs)
+            userVerificationPreference: \(userVerification)
+            clientDataHash: \(clientDataHashHex)
+            relyingPartyIdentifier: \(rpId)
+            userName: \(userName)
+            userHandle: \(userHandle)
+            credentialID(Identity): \(credentialIdentityID)
+            excludedCredentials: \(excludeList)
+            """
+        )
 
         let origin = credentialIdentity.relyingPartyIdentifier
         let clientDataHash = request.clientDataHash
-        //let userHandle = String(data: credentialIdentity.userHandle, encoding: .utf8) ?? ""
+        // let userHandle = String(data: credentialIdentity.userHandle, encoding: .utf8) ?? ""
 
-        let walletInfo = try getWalletInfo(origin: origin)//, userHandle: userHandle)
+        let walletInfo = try getWalletInfo(origin: origin) // , userHandle: userHandle)
         let pubkey = walletInfo.p256KeyPair.publicKey.rawRepresentation
         let credentialID = Data([UInt8](Utility.hashSHA256(pubkey)))
 
@@ -171,16 +200,16 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
         ).toData()
 
         let attObj: [String: Any] = [
-            "fmt": "none",
             "attStmt": [:],
-            "authData": authData
+            "authData": authData,
+            "fmt": "none",
         ]
         let cborEncoded = try CBOR.encodeMap(attObj)
         let attestationObject = Data(cborEncoded)
         // -------------------------------
 
         return ASPasskeyRegistrationCredential(
-            relyingParty: origin,
+            relyingParty: credentialIdentity.relyingPartyIdentifier,
             clientDataHash: clientDataHash,
             credentialID: credentialID,
             attestationObject: attestationObject
@@ -195,9 +224,9 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
         let origin = credentialIdentity.relyingPartyIdentifier
 
         let userHandleData = credentialIdentity.userHandle
-        //let userHandle = String(data: userHandleData, encoding: .utf8) ?? ""
+        // let userHandle = String(data: userHandleData, encoding: .utf8) ?? ""
 
-        let walletInfo = try getWalletInfo(origin: origin)//, userHandle: userHandle)
+        let walletInfo = try getWalletInfo(origin: origin) // , userHandle: userHandle)
         let credentialID = Data(Utility.hashSHA256(walletInfo.p256KeyPair.publicKey.rawRepresentation))
         let signature = try walletInfo.p256KeyPair.signature(for: request.clientDataHash)
         let sigData = signature.derRepresentation
@@ -213,6 +242,37 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
             authenticatorData: authenticatorData,
             credentialID: credentialID
         )
+    }
+
+    private func createAssertionCredential(for credentialIdentity: ASPasskeyCredentialIdentity) async throws -> ASPasskeyAssertionCredential {
+        let origin = credentialIdentity.relyingPartyIdentifier
+        let userHandleData = credentialIdentity.userHandle
+
+        let walletInfo = try getWalletInfo(origin: origin)
+        let credentialID = Data(Utility.hashSHA256(walletInfo.p256KeyPair.publicKey.rawRepresentation))
+        // Use an empty Data() for clientDataHash and authenticatorData as placeholders, or adapt as needed
+        let signature = try walletInfo.p256KeyPair.signature(for: Data())
+        let sigData = signature.derRepresentation
+
+        let authenticatorData = Data([0x01, 0x02, 0x03]) // Dummy data for demo
+
+        return ASPasskeyAssertionCredential(
+            userHandle: userHandleData,
+            relyingParty: origin,
+            signature: sigData,
+            clientDataHash: Data(),
+            authenticatorData: authenticatorData,
+            credentialID: credentialID
+        )
+    }
+
+    private func isCredentialIdentityRegistered(_ identity: ASPasskeyCredentialIdentity) async -> Bool {
+        let store = ASCredentialIdentityStore.shared
+        let identities = await store.credentialIdentities(
+            forService: ASCredentialServiceIdentifier(identifier: identity.relyingPartyIdentifier, type: .domain),
+            credentialIdentityTypes: [.passkey]
+        )
+        return identities.contains { $0 is ASPasskeyCredentialIdentity && ($0 as! ASPasskeyCredentialIdentity).credentialID == identity.credentialID }
     }
 
     private func savePasskeyIdentity(
@@ -272,6 +332,11 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
         }
     }
 
+    // prepareInterfaceForExtensionConfiguration()
+    // Prepares the interface to enable the user to configure the extension.
+    // The system calls this method after the user enables your extension in Settings.
+    // Use this method to prepare a user interface for configuring the extension.
+
     // MARK: - Wallet Logic
 
     private struct WalletInfo {
@@ -294,7 +359,7 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
 
         let dp256 = DeterministicP256()
         let derivedMainKey = try dp256.genDerivedMainKeyWithBIP39(phrase: phrase)
-        let p256KeyPair = dp256.genDomainSpecificKeyPair(derivedMainKey: derivedMainKey, origin: "https://\(origin)", userHandle: address)//userHandle)
+        let p256KeyPair = dp256.genDomainSpecificKeyPair(derivedMainKey: derivedMainKey, origin: origin, userHandle: address) // userHandle)
 
         return WalletInfo(
             ed25519Wallet: ed25519Wallet,
