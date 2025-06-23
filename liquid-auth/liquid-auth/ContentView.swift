@@ -1,13 +1,13 @@
-import SwiftUI
-import SwiftCBOR
+import AuthenticationServices
 import AVFoundation
-import x_hd_wallet_api
-import MnemonicSwift
 import CryptoKit
 import deterministicP256_swift
-import WebRTC
 import LocalAuthentication
-import AuthenticationServices
+import MnemonicSwift
+import SwiftCBOR
+import SwiftUI
+import WebRTC
+import x_hd_wallet_api
 
 import Foundation
 
@@ -29,7 +29,7 @@ struct ContentView: View {
                         .imageScale(.large)
                         .foregroundStyle(.tint)
                     Text("Ready to scan?")
-                    
+
                     Button(action: {
                         isScanning = true
                     }) {
@@ -53,7 +53,7 @@ struct ContentView: View {
                                 .padding()
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        .frame(maxHeight: 300) 
+                        .frame(maxHeight: 300)
                         .padding()
                     }
 
@@ -115,7 +115,7 @@ struct ContentView: View {
                 },
                 .cancel {
                     resetState() // Reset state when "Cancel" is pressed
-                }
+                },
             ]
         )
     }
@@ -130,9 +130,7 @@ struct ContentView: View {
         actionSheetRequestId = nil
     }
 
-
     private func handleScannedCode(_ code: String) {
-
         isScanning = false // Dismiss the QR code scanner
         isLoading = false // Ensure progress bar is hidden
         showActionSheet = false // Ensure action sheet is hidden
@@ -146,52 +144,51 @@ struct ContentView: View {
             errorMessage = nil
 
             // Attempt to open the URI using UIApplication
-            
-            /*
-             guard let url = URL(string: code) else {
-                errorMessage = "Invalid URI format."
-                scannedMessage = nil
-                return
-            }
-            
-            UIApplication.shared.open(url, options: [:]) { success in
-                    if success {
-                        scannedMessage = "Opened URI: \(code)"
-                        errorMessage = nil
-                    } else {
-                        errorMessage = "Failed to open URI: \(code)"
-                        scannedMessage = nil
-                    }
-                }
-            */
 
+            /*
+              guard let url = URL(string: code) else {
+                 errorMessage = "Invalid URI format."
+                 scannedMessage = nil
+                 return
+             }
+
+             UIApplication.shared.open(url, options: [:]) { success in
+                     if success {
+                         scannedMessage = "Opened URI: \(code)"
+                         errorMessage = nil
+                     } else {
+                         errorMessage = "Failed to open URI: \(code)"
+                         scannedMessage = nil
+                     }
+                 }
+             */
 
             // This is how to decode the FIDO URI and extract the contents
             /*
-             if let fidoRequest = FIDOHandler.decodeFIDOURI(code) {
-                // Determine the flow type
-                scannedMessage = "\(fidoRequest.flowType) flow detected. Ready to proceed."
+              if let fidoRequest = FIDOHandler.decodeFIDOURI(code) {
+                 // Determine the flow type
+                 scannedMessage = "\(fidoRequest.flowType) flow detected. Ready to proceed."
 
-                // Log the extracted fields
-                Logger.debug("Public Key: \(fidoRequest.publicKey)")
-                Logger.debug("QR Secret: \(fidoRequest.qrSecret)")
-                Logger.debug("Tunnel Server Count: \(fidoRequest.tunnelServerCount)")
-                if let currentTime = fidoRequest.currentTime {
-                    Logger.debug("Current Time: \(currentTime)")
-                }
-                if let stateAssisted = fidoRequest.stateAssisted {
-                    Logger.debug("State-Assisted Transactions: \(stateAssisted)")
-                }
-                if let hint = fidoRequest.hint {
-                    Logger.debug("Hint: \(hint)")
-                }
+                 // Log the extracted fields
+                 Logger.debug("Public Key: \(fidoRequest.publicKey)")
+                 Logger.debug("QR Secret: \(fidoRequest.qrSecret)")
+                 Logger.debug("Tunnel Server Count: \(fidoRequest.tunnelServerCount)")
+                 if let currentTime = fidoRequest.currentTime {
+                     Logger.debug("Current Time: \(currentTime)")
+                 }
+                 if let stateAssisted = fidoRequest.stateAssisted {
+                     Logger.debug("State-Assisted Transactions: \(stateAssisted)")
+                 }
+                 if let hint = fidoRequest.hint {
+                     Logger.debug("Hint: \(hint)")
+                 }
 
-                errorMessage = nil
-            } else {
-                errorMessage = "Failed to process FIDO URI."
-                scannedMessage = nil
-            }
-            */
+                 errorMessage = nil
+             } else {
+                 errorMessage = "Failed to process FIDO URI."
+                 scannedMessage = nil
+             }
+             */
         } else if code.starts(with: "liquid://") {
             // Handle Liquid Auth URI
             isLoading = true
@@ -220,29 +217,28 @@ struct ContentView: View {
 
             Logger.debug("Origin: \(origin), Request ID: \(requestId)")
 
-
             // Prompt the user to choose between registration and authentication
             DispatchQueue.main.async {
                 actionSheetOrigin = origin
                 actionSheetRequestId = requestId
                 showActionSheet = true
-                }
-            }
-
-            // Show a loading overlay when isLoading is true
-            if isLoading {
-                VStack {
-                    ProgressView("Processing...")
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(10)
-                        .shadow(radius: 10)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.black.opacity(0.5))
-                .edgesIgnoringSafeArea(.all)
             }
         }
+
+        // Show a loading overlay when isLoading is true
+        if isLoading {
+            VStack {
+                ProgressView("Processing...")
+                    .padding()
+                    .background(Color.white)
+                    .cornerRadius(10)
+                    .shadow(radius: 10)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black.opacity(0.5))
+            .edgesIgnoringSafeArea(.all)
+        }
+    }
 
     private func startProcessing(action: @escaping () -> Void) {
         // Ensure the progress bar only shows after the action sheet is dismissed
@@ -255,7 +251,7 @@ struct ContentView: View {
 
     private func register(origin: String, requestId: String) async {
         do {
-            defer { 
+            defer {
                 isLoading = false
             }
 
@@ -289,7 +285,7 @@ struct ContentView: View {
                 "username": address,
                 "displayName": "Liquid Auth User",
                 "authenticatorSelection": ["userVerification": "required"],
-                "extensions": ["liquid": true]
+                "extensions": ["liquid": true],
             ]
 
             let userAgent = Utility.getUserAgent()
@@ -302,8 +298,15 @@ struct ContentView: View {
             }
 
             guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                let challengeBase64Url = json["challenge"] as? String else {
-                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse response JSON or find the challenge field."])
+                  let challengeBase64Url = json["challenge"] as? String,
+                  let rp = json["rp"] as? [String: Any],
+                  let rpId = rp["id"] as? String
+            else {
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse response JSON or find the challenge/rpId field."])
+            }
+
+            if origin != rpId {
+                Logger.info("⚠️ Origin (\(origin)) and rpId (\(rpId)) are different. This is allowed, but make sure this is intentional.")
             }
 
             Logger.debug("Challenge (Base64): \(challengeBase64Url)")
@@ -343,11 +346,12 @@ struct ContentView: View {
             let clientData: [String: Any] = [
                 "type": "webauthn.create",
                 "challenge": challengeBase64Url,
-                "origin": "https://\(origin)"
+                "origin": "https://\(rpId)",
             ]
 
             guard let clientDataJSONData = try? JSONSerialization.data(withJSONObject: clientData, options: []),
-                  let _ = String(data: clientDataJSONData, encoding: .utf8) else {
+                  let _ = String(data: clientDataJSONData, encoding: .utf8)
+            else {
                 throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create clientDataJSON"])
             }
 
@@ -358,7 +362,7 @@ struct ContentView: View {
             let attestedCredData = Utility.getAttestedCredentialData(aaguid: UUID(uuidString: "1F59713A-C021-4E63-9158-2CC5FDC14E52")!, credentialId: rawId, publicKey: P256KeyPair.publicKey.rawRepresentation)
             Logger.debug("created attestedCredData: \(attestedCredData.count)")
 
-            let rpIdHash = Utility.hashSHA256(origin.data(using: .utf8)!)
+            let rpIdHash = Utility.hashSHA256(rpId.data(using: .utf8)!)
             let authData = AuthenticatorData.attestation(
                 rpIdHash: rpIdHash,
                 userPresent: true,
@@ -372,7 +376,7 @@ struct ContentView: View {
             let attObj: [String: Any] = [
                 "fmt": "none",
                 "attStmt": [:],
-                "authData": authData.toData()
+                "authData": authData.toData(),
             ]
 
             let cborEncoded = try CBOR.encodeMap(attObj)
@@ -385,8 +389,8 @@ struct ContentView: View {
                 "rawId": rawId.base64URLEncodedString(),
                 "response": [
                     "clientDataJSON": clientDataJSONBase64Url,
-                    "attestationObject": attestationObject.base64URLEncodedString()
-                ]
+                    "attestationObject": attestationObject.base64URLEncodedString(),
+                ],
             ]
             Logger.debug("Created credential: \(credential)")
 
@@ -404,7 +408,8 @@ struct ContentView: View {
 
             // Parse the response to check for errors
             if let responseJSON = try? JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any],
-            let errorReason = responseJSON["error"] as? String {
+               let errorReason = responseJSON["error"] as? String
+            {
                 // If an error exists, propagate it
                 Logger.error("Registration failed: \(errorReason)")
                 errorMessage = "Registration failed: \(errorReason)"
@@ -432,11 +437,9 @@ struct ContentView: View {
         }
     }
 
-
     private func authenticate(origin: String, requestId: String) async {
         do {
-
-            defer { 
+            defer {
                 isLoading = false
             }
 
@@ -446,7 +449,7 @@ struct ContentView: View {
                 isLoading = false
                 return
             }
-            
+
             let walletInfo = try getWalletInfo(origin: origin)
             let Ed25519Wallet = walletInfo.ed25519Wallet
             let DP256 = walletInfo.dp256
@@ -455,7 +458,7 @@ struct ContentView: View {
             let address = walletInfo.address
 
             let userAgent = Utility.getUserAgent()
-            
+
             let assertionApi = AssertionApi()
 
             let credentialId = Data([UInt8](Utility.hashSHA256(P256KeyPair.publicKey.rawRepresentation))).base64URLEncodedString()
@@ -473,14 +476,27 @@ struct ContentView: View {
                 // Store or use the session cookie as needed
             }
 
-                // Parse the response data
+            // Parse the response data
             guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                  let challengeBase64Url = json["challenge"] as? String,
-                  let _ = json["allowCredentials"] as? [[String: Any]],
-                  let _ = json["rpId"] as? String else {
-                throw NSError(domain: "Missing required fields in response", code: -1, userInfo: nil)
+                  let challengeBase64Url = json["challenge"] as? String
+            else {
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse response JSON or find the challenge field."])
             }
-            
+
+            // Support both "rp": { "id": ... } and "rpId": ...
+            let rpId: String
+            if let rp = json["rp"] as? [String: Any], let id = rp["id"] as? String {
+                rpId = id
+            } else if let id = json["rpId"] as? String {
+                rpId = id
+            } else {
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to find rpId in response."])
+            }
+
+            if origin != rpId {
+                Logger.info("⚠️ Origin (\(origin)) and rpId (\(rpId)) are different. This is allowed, but make sure this is intentional.")
+            }
+
             Logger.debug("Response: \(String(describing: String(data: data, encoding: .utf8)))")
 
             Logger.debug("Challenge (Base64): \(challengeBase64Url)")
@@ -503,7 +519,7 @@ struct ContentView: View {
 
             Logger.debug("Signature: \(sig.base64URLEncodedString())")
             Logger.debug("Signature Length (Raw Bytes): \(sig.count)")
-            
+
             // Create the Liquid extension JSON object
             let liquidExt = createLiquidExt(
                 requestId: requestId,
@@ -516,19 +532,19 @@ struct ContentView: View {
             let clientData: [String: Any] = [
                 "type": "webauthn.get",
                 "challenge": challengeBase64Url,
-                "origin": "https://\(origin)"
+                "origin": "https://\(rpId)",
             ]
-            
-            
+
             guard let clientDataJSONData = try? JSONSerialization.data(withJSONObject: clientData, options: []),
-                  let _ = String(data: clientDataJSONData, encoding: .utf8) else {
+                  let _ = String(data: clientDataJSONData, encoding: .utf8)
+            else {
                 throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create clientDataJSON"])
             }
 
             let clientDataJSONBase64Url = clientDataJSONData.base64URLEncodedString()
             Logger.debug("Created clientDataJSON: \(clientDataJSONBase64Url)")
 
-            let rpIdHash = Utility.hashSHA256(origin.data(using: .utf8)!)
+            let rpIdHash = Utility.hashSHA256(rpId.data(using: .utf8)!)
             let authenticatorData = AuthenticatorData.assertion(
                 rpIdHash: rpIdHash,
                 userPresent: true,
@@ -536,7 +552,6 @@ struct ContentView: View {
                 backupEligible: false,
                 backupState: false
             ).toData()
-
 
             let clientDataHash = Utility.hashSHA256(clientDataJSONData)
             let dataToSign = authenticatorData + clientDataHash
@@ -551,17 +566,18 @@ struct ContentView: View {
                 "response": [
                     "clientDataJSON": clientDataJSONData.base64URLEncodedString(),
                     "authenticatorData": authenticatorData.base64URLEncodedString(),
-                    "signature": signature.derRepresentation.base64URLEncodedString()
-                ]
+                    "signature": signature.derRepresentation.base64URLEncodedString(),
+                ],
             ]
 
             Logger.debug("Created assertion response: \(assertionResponse)")
 
             // Serialize the assertion response into a JSON string
             guard let assertionResponseData = try? JSONSerialization.data(withJSONObject: assertionResponse, options: []),
-                let assertionResponseJSON = String(data: assertionResponseData, encoding: .utf8) else {
+                  let assertionResponseJSON = String(data: assertionResponseData, encoding: .utf8)
+            else {
                 throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to serialize assertion response"])
-            }                
+            }
 
             // Post the assertion result
             let responseData = try await assertionApi.postAssertionResult(
@@ -577,7 +593,8 @@ struct ContentView: View {
 
             // Parse the response to check for errors
             if let responseJSON = try? JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any],
-            let errorReason = responseJSON["error"] as? String {
+               let errorReason = responseJSON["error"] as? String
+            {
                 Logger.error("Authentication failed: \(errorReason)")
                 errorMessage = "Authentication failed: \(errorReason)"
                 scannedMessage = nil
@@ -597,7 +614,7 @@ struct ContentView: View {
 
     private func startSignaling(origin: String, requestId: String, walletInfo: WalletInfo) {
         let signalService = SignalService.shared
-        
+
         signalService.start(url: origin, httpClient: URLSession.shared)
 
         let NODELY_TURN_USERNAME = "liquid-auth"
@@ -610,7 +627,7 @@ struct ContentView: View {
                     "stun:stun1.l.google.com:19302",
                     "stun:stun2.l.google.com:19302",
                     "stun:stun3.l.google.com:19302",
-                    "stun:stun4.l.google.com:19302"
+                    "stun:stun4.l.google.com:19302",
                 ]
             ),
             RTCIceServer(
@@ -620,13 +637,13 @@ struct ContentView: View {
                     "turn:eu.turn.nodely.io:80?transport=tcp",
                     "turns:eu.turn.nodely.io:443?transport=tcp",
                     "turn:us.turn.nodely.io:80?transport=tcp",
-                    "turns:us.turn.nodely.io:443?transport=tcp"
+                    "turns:us.turn.nodely.io:443?transport=tcp",
                 ],
                 username: NODELY_TURN_USERNAME,
                 credential: NODELY_TURN_CREDENTIAL
             ),
         ]
-        
+
         Task {
             signalService.connectToPeer(
                 requestId: requestId,
@@ -637,7 +654,7 @@ struct ContentView: View {
                     Logger.info("💬 Received message: \(message)")
 
                     var displayMessage: String
-                    
+
                     if let decoded = Utility.decodeBase64UrlCBORIfPossible(message) {
                         displayMessage = "Decoded: \(decoded)"
                         Logger.info("Decoded message: \(decoded)")
@@ -673,7 +690,7 @@ struct ContentView: View {
             "requestId": requestId,
             "address": address,
             "signature": signature,
-            "device": UIDevice.current.model
+            "device": UIDevice.current.model,
         ]
     }
 }
@@ -713,7 +730,8 @@ private func handleArc27Message(_ message: String, ed25519Wallet: XHDWalletAPI) 
     // 1. Decode base64url CBOR using Utility
     guard let cborData = Utility.decodeBase64Url(message),
           let cbor = try? CBOR.decode([UInt8](cborData)),
-          let dict = (cbor.asSwiftObject() as? [String: Any]) else {
+          let dict = (cbor.asSwiftObject() as? [String: Any])
+    else {
         Logger.error("Failed to decode CBOR or convert to dictionary")
         return nil
     }
@@ -723,7 +741,8 @@ private func handleArc27Message(_ message: String, ed25519Wallet: XHDWalletAPI) 
           reference == "arc0027:sign_transactions:request",
           let params = dict["params"] as? [String: Any],
           let txns = params["txns"] as? [[String: Any]],
-          let requestId = dict["id"] as? String else {
+          let requestId = dict["id"] as? String
+    else {
         Logger.error("Invalid ARC27 request format")
         return nil
     }
@@ -747,7 +766,8 @@ private func handleArc27Message(_ message: String, ed25519Wallet: XHDWalletAPI) 
     var signedTxns: [String] = []
     for txnObj in txns {
         guard let txnBase64Url = txnObj["txn"] as? String,
-              let txnBytes = Utility.decodeBase64Url(txnBase64Url) else {
+              let txnBytes = Utility.decodeBase64Url(txnBase64Url)
+        else {
             Logger.error("Failed to decode transaction base64url")
             continue
         }
@@ -781,8 +801,8 @@ private func handleArc27Message(_ message: String, ed25519Wallet: XHDWalletAPI) 
         "requestId": requestId,
         "result": [
             "providerId": params["providerId"] ?? "liquid-auth-ios",
-            "stxns": signedTxns
-        ]
+            "stxns": signedTxns,
+        ],
     ]
 
     // 5. CBOR encode and base64url encode
@@ -835,7 +855,7 @@ func requireUserVerification(reason: String = "Authenticate to continue") async 
 extension Data {
     /// Converts the Data object to a Base64URL-encoded string.
     func base64URLEncodedString() -> String {
-        let base64 = self.base64EncodedString()
+        let base64 = base64EncodedString()
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "") // Remove padding
