@@ -298,9 +298,15 @@ struct ContentView: View {
             }
 
             guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                  let challengeBase64Url = json["challenge"] as? String
+                  let challengeBase64Url = json["challenge"] as? String,
+                  let rp = json["rp"] as? [String: Any],
+                  let rpId = rp["id"] as? String
             else {
-                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse response JSON or find the challenge field."])
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse response JSON or find the challenge/rpId field."])
+            }
+
+            if origin != rpId {
+                Logger.info("⚠️ Origin (\(origin)) and rpId (\(rpId)) are different. This is allowed, but make sure this is intentional.")
             }
 
             Logger.debug("Challenge (Base64): \(challengeBase64Url)")
@@ -340,7 +346,7 @@ struct ContentView: View {
             let clientData: [String: Any] = [
                 "type": "webauthn.create",
                 "challenge": challengeBase64Url,
-                "origin": "https://\(origin)",
+                "origin": "https://\(rpId)",
             ]
 
             guard let clientDataJSONData = try? JSONSerialization.data(withJSONObject: clientData, options: []),
@@ -361,7 +367,7 @@ struct ContentView: View {
 
             Logger.debug("created attestedCredData: \(attestedCredData.count)")
 
-            let rpIdHash = Utility.hashSHA256(origin.data(using: .utf8)!)
+            let rpIdHash = Utility.hashSHA256(rpId.data(using: .utf8)!)
             let authData = AuthenticatorData.attestation(
                 rpIdHash: rpIdHash,
                 userPresent: true,
@@ -477,11 +483,23 @@ struct ContentView: View {
 
             // Parse the response data
             guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                  let challengeBase64Url = json["challenge"] as? String,
-                  let _ = json["allowCredentials"] as? [[String: Any]],
-                  let _ = json["rpId"] as? String
+                  let challengeBase64Url = json["challenge"] as? String
             else {
-                throw NSError(domain: "Missing required fields in response", code: -1, userInfo: nil)
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse response JSON or find the challenge field."])
+            }
+
+            // Support both "rp": { "id": ... } and "rpId": ...
+            let rpId: String
+            if let rp = json["rp"] as? [String: Any], let id = rp["id"] as? String {
+                rpId = id
+            } else if let id = json["rpId"] as? String {
+                rpId = id
+            } else {
+                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to find rpId in response."])
+            }
+
+            if origin != rpId {
+                Logger.info("⚠️ Origin (\(origin)) and rpId (\(rpId)) are different. This is allowed, but make sure this is intentional.")
             }
 
             Logger.debug("Response: \(String(describing: String(data: data, encoding: .utf8)))")
@@ -519,7 +537,7 @@ struct ContentView: View {
             let clientData: [String: Any] = [
                 "type": "webauthn.get",
                 "challenge": challengeBase64Url,
-                "origin": "https://\(origin)",
+                "origin": "https://\(rpId)",
             ]
 
             guard let clientDataJSONData = try? JSONSerialization.data(withJSONObject: clientData, options: []),
@@ -531,7 +549,7 @@ struct ContentView: View {
             let clientDataJSONBase64Url = clientDataJSONData.base64URLEncodedString()
             Logger.debug("Created clientDataJSON: \(clientDataJSONBase64Url)")
 
-            let rpIdHash = Utility.hashSHA256(origin.data(using: .utf8)!)
+            let rpIdHash = Utility.hashSHA256(rpId.data(using: .utf8)!)
             let authenticatorData = AuthenticatorData.assertion(
                 rpIdHash: rpIdHash,
                 userPresent: true,
