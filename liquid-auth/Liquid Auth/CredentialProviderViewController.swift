@@ -23,7 +23,7 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
                 }
                 do {
                     let credential = try await createRegistrationCredential(for: passkeyRequest)
-                    self.completeRegistrationRequest(credential, userHandle: passkeyRequest.credentialIdentity.user)
+                    await self.completeRegistrationRequest(credential, userHandle: passkeyRequest.credentialIdentity.user)
                 } catch let error as NSError {
                     // If error is due to excluded credential, delay before returning
                     if error.domain == "Credential already exists for this site" {
@@ -63,28 +63,6 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
         }
     }
 
-    func provideCredentialWithoutUserInteraction(for credentialIdentity: ASPasskeyCredentialIdentity) {
-        if #available(iOSApplicationExtension 17.0, *) {
-            // This method is called when the system needs to provide a credential without user interaction.
-            // It can be used for automatic sign-in or other scenarios where user interaction is not required.
-            Task {
-                let isRegistered = await isCredentialIdentityRegistered(credentialIdentity)
-                guard isRegistered else {
-                    self.extensionContext.cancelRequest(withError: NSError(domain: "Credential not registered", code: -1))
-                    return
-                }
-                do {
-                    let credential = try await createAssertionCredential(for: credentialIdentity)
-                    self.completeAssertionRequest(credential)
-                } catch {
-                    self.extensionContext.cancelRequest(withError: error)
-                }
-            }
-        } else {
-            extensionContext.cancelRequest(withError: NSError(domain: "Passkeys require iOS 17+", code: -1))
-        }
-    }
-
     func presentUserConsentAlert(title: String, message: String) async -> Bool {
         await withCheckedContinuation { continuation in
             let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
@@ -113,15 +91,15 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
         }
     }
 
-    func completeRegistrationRequest(_ credential: ASPasskeyRegistrationCredential, userHandle: String) {
-        extensionContext.completeRegistrationRequest(using: credential)
-        // Save the credential identity after successful registration
+    func completeRegistrationRequest(_ credential: ASPasskeyRegistrationCredential, userHandle: String) async {
+        // Save the credential identity
         savePasskeyIdentity(
             relyingPartyIdentifier: credential.relyingParty,
             userName: userHandle,
             credentialID: credential.credentialID,
             userHandle: Data(userHandle.utf8)
         )
+        await extensionContext.completeRegistrationRequest(using: credential)
     }
 
     func completeAssertionRequest(_ credential: ASPasskeyAssertionCredential) {
@@ -134,33 +112,8 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
             throw NSError(domain: "Missing credential identity", code: -1)
         }
 
-        // --- DEBUG: Show all available WebAuthn request info ---
-        let supportedAlgs = request.supportedAlgorithms.map { "\($0.rawValue)" }.joined(separator: ", ")
-        let userVerification = request.userVerificationPreference.rawValue
-        let clientDataHashHex = request.clientDataHash.map { String(format: "%02x", $0) }.joined()
-        let rpId = credentialIdentity.relyingPartyIdentifier
-        let userName = credentialIdentity.userName
-        let userHandle = credentialIdentity.userHandle.base64EncodedString()
-        let credentialIdentityID = credentialIdentity.credentialID.base64EncodedString()
-        let excludeList = request.excludedCredentials?.map { $0.credentialID.base64EncodedString() }.joined(separator: ", ") ?? "none"
-
-        await presentDebugAlert(
-            title: "Passkey Request Info",
-            message: """
-            supportedAlgorithms: \(supportedAlgs)
-            userVerificationPreference: \(userVerification)
-            clientDataHash: \(clientDataHashHex)
-            relyingPartyIdentifier: \(rpId)
-            userName: \(userName)
-            userHandle: \(userHandle)
-            credentialID(Identity): \(credentialIdentityID)
-            excludedCredentials: \(excludeList)
-            """
-        )
-
         let origin = credentialIdentity.relyingPartyIdentifier
         let clientDataHash = request.clientDataHash
-        // let userHandle = String(data: credentialIdentity.userHandle, encoding: .utf8) ?? ""
 
         let walletInfo = try getWalletInfo(origin: origin) // , userHandle: userHandle)
         let pubkey = walletInfo.p256KeyPair.publicKey.rawRepresentation
@@ -179,7 +132,6 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
                 }
             }
         }
-        // -------------------------------
 
         // --- Build attestationObject ---
         let aaguid = UUID(uuidString: "1F59713A-C021-4E63-9158-2CC5FDC14E52")!
@@ -190,23 +142,25 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
         )
 
         let rpIdHash = Utility.hashSHA256(origin.data(using: .utf8)!)
+
         let authData = AuthenticatorData.attestation(
             rpIdHash: rpIdHash,
             userPresent: true,
             userVerified: true,
+            backupEligible: true,
+            backupState: true,
             signCount: 0,
             attestedCredentialData: attestedCredData,
             extensions: nil
         ).toData()
 
-        let attObj: [String: Any] = [
-            "attStmt": [:],
-            "authData": authData,
-            "fmt": "none",
+        let attObj: [String: CBOR] = [
+            "attStmt": CBOR.map([:]),
+            "authData": CBOR.byteString([UInt8](authData)),
+            "fmt": CBOR.utf8String("none"),
         ]
-        let cborEncoded = try CBOR.encodeMap(attObj)
+        let cborEncoded = try CBOR.encode(attObj)
         let attestationObject = Data(cborEncoded)
-        // -------------------------------
 
         return ASPasskeyRegistrationCredential(
             relyingParty: credentialIdentity.relyingPartyIdentifier,
@@ -222,45 +176,29 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
             throw NSError(domain: "Missing credential identity", code: -1)
         }
         let origin = credentialIdentity.relyingPartyIdentifier
-
         let userHandleData = credentialIdentity.userHandle
-        // let userHandle = String(data: userHandleData, encoding: .utf8) ?? ""
 
-        let walletInfo = try getWalletInfo(origin: origin) // , userHandle: userHandle)
+        let walletInfo = try getWalletInfo(origin: origin)
         let credentialID = Data(Utility.hashSHA256(walletInfo.p256KeyPair.publicKey.rawRepresentation))
         let signature = try walletInfo.p256KeyPair.signature(for: request.clientDataHash)
         let sigData = signature.derRepresentation
 
-        // Dummy authenticatorData for demo
-        let authenticatorData = Data([0x01, 0x02, 0x03])
+        // Proper authenticatorData for assertion
+        let rpIdHash = Utility.hashSHA256(origin.data(using: .utf8)!)
+        let authenticatorData = AuthenticatorData.assertion(
+            rpIdHash: rpIdHash,
+            userPresent: true,
+            userVerified: true,
+            backupEligible: true,
+            backupState: true,
+            signCount: 0
+        ).toData()
 
         return ASPasskeyAssertionCredential(
             userHandle: userHandleData,
             relyingParty: origin,
             signature: sigData,
             clientDataHash: request.clientDataHash,
-            authenticatorData: authenticatorData,
-            credentialID: credentialID
-        )
-    }
-
-    private func createAssertionCredential(for credentialIdentity: ASPasskeyCredentialIdentity) async throws -> ASPasskeyAssertionCredential {
-        let origin = credentialIdentity.relyingPartyIdentifier
-        let userHandleData = credentialIdentity.userHandle
-
-        let walletInfo = try getWalletInfo(origin: origin)
-        let credentialID = Data(Utility.hashSHA256(walletInfo.p256KeyPair.publicKey.rawRepresentation))
-        // Use an empty Data() for clientDataHash and authenticatorData as placeholders, or adapt as needed
-        let signature = try walletInfo.p256KeyPair.signature(for: Data())
-        let sigData = signature.derRepresentation
-
-        let authenticatorData = Data([0x01, 0x02, 0x03]) // Dummy data for demo
-
-        return ASPasskeyAssertionCredential(
-            userHandle: userHandleData,
-            relyingParty: origin,
-            signature: sigData,
-            clientDataHash: Data(),
             authenticatorData: authenticatorData,
             credentialID: credentialID
         )
@@ -289,9 +227,9 @@ class CredentialProviderViewController: ASCredentialProviderViewController {
         )
         ASCredentialIdentityStore.shared.saveCredentialIdentities([passkeyIdentity]) { success, error in
             if success {
-                print("✅ Passkey identity saved to identity store!")
+                NSLog("✅ Passkey identity saved to identity store!")
             } else if let error = error {
-                print("❌ Failed to save passkey identity: \(error)")
+                NSLog("❌ Failed to save passkey identity: \(error)")
             }
         }
     }

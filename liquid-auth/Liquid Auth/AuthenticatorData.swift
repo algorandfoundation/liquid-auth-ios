@@ -11,7 +11,7 @@ struct AuthenticatorData: Codable {
     var signCount: UInt32
 
     // Flag masks (WebAuthn spec)
-    static let upMask: UInt8 = 1      // User present (bit 0)
+    static let upMask: UInt8 = 1 // User present (bit 0)
     static let uvMask: UInt8 = 1 << 2 // User verified (bit 2)
     static let beMask: UInt8 = 1 << 3 // Backup eligible (bit 3)
     static let bsMask: UInt8 = 1 << 4 // Backup state (bit 4)
@@ -44,6 +44,8 @@ struct AuthenticatorData: Codable {
         rpIdHash: Data,
         userPresent: Bool,
         userVerified: Bool,
+        backupEligible: Bool,
+        backupState: Bool,
         signCount: UInt32,
         attestedCredentialData: Data,
         extensions: Data? = nil
@@ -52,8 +54,8 @@ struct AuthenticatorData: Codable {
             rpIdHash: rpIdHash,
             userPresent: userPresent,
             userVerified: userVerified,
-            backupEligible: false,
-            backupState: false,
+            backupEligible: backupEligible,
+            backupState: backupState,
             signCount: signCount,
             attestedCredentialData: attestedCredentialData,
             extensions: extensions
@@ -65,8 +67,8 @@ struct AuthenticatorData: Codable {
         rpIdHash: Data,
         userPresent: Bool,
         userVerified: Bool,
-        backupEligible: Bool = false,
-        backupState: Bool = false,
+        backupEligible: Bool,
+        backupState: Bool,
         signCount: UInt32 = 0
     ) -> AuthenticatorData {
         return AuthenticatorData(
