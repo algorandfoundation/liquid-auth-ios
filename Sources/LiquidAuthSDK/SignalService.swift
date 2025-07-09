@@ -1,10 +1,14 @@
 import Foundation
 import WebRTC
-import UserNotifications
 
-class SignalService {
-    static let shared = SignalService()
+public protocol SignalServiceDelegate: AnyObject {
+    func signalService(_ service: SignalService, didReceiveStatusUpdate title: String, message: String)
+}
 
+public class SignalService {
+    public static let shared = SignalService()
+
+    public weak var delegate: SignalServiceDelegate?
     private var signalClient: SignalClient?
     private var peerClient: PeerApi?
     var dataChannel: RTCDataChannel?
@@ -21,27 +25,27 @@ class SignalService {
     private init() {}
 
     // MARK: - Start the signaling service
-    func start(url: String, httpClient: URLSession) {
+    public func start(url: String, httpClient: URLSession) {
         // Initialize the SignalClient
         signalClient = SignalClient(url: url, service: self)
         signalClient?.connectSocket()
-        sendNotification(title: "Signal Service", body: "Service started successfully.")
+        delegate?.signalService(self, didReceiveStatusUpdate: "Signal Service", message: "Service started successfully.")
     }
 
     // MARK: - Stop the signaling service
-    func stop() {
+    public func stop() {
         signalClient?.disconnectSocket()
         signalClient = nil
         peerClient = nil
         dataChannel = nil
         peerConnection = nil
-        sendNotification(title: "Signal Service", body: "Service stopped.")
+        delegate?.signalService(self, didReceiveStatusUpdate: "Signal Service", message: "Service stopped.")
     }
 
     // MARK: - Disconnect from the signaling service
-    func disconnect() {
+    public func disconnect() {
         signalClient?.disconnectSocket()
-        sendNotification(title: "Signal Service", body: "Disconnected from the signaling server.")
+        delegate?.signalService(self, didReceiveStatusUpdate: "Signal Service", message: "Disconnected from the signaling server.")
     }
 
     // MARK: - Check if the signaling service is initialized
@@ -50,7 +54,7 @@ class SignalService {
     }
 
     // MARK: - Connect to a peer by request ID
-    func connectToPeer(
+    public func connectToPeer(
         requestId: String,
         type: String,
         origin: String,
@@ -104,7 +108,7 @@ class SignalService {
                 Logger.error("Peer connection is nil.")
             }
 
-            self.sendNotification(title: "Peer Connection", body: "Connected to peer with request ID: \(requestId).")
+            self.delegate?.signalService(self, didReceiveStatusUpdate: "Peer Connection", message: "Connected to peer with request ID: \(requestId).")
         }
 
         signalClient?.connectSocket()
@@ -113,7 +117,7 @@ class SignalService {
     }
 
     // MARK: - Send a message through the data channel
-    func sendMessage(_ message: String) {
+    public func sendMessage(_ message: String) {
         if let dataChannel = dataChannel, dataChannel.readyState == .open {
             Logger.debug("SignalService: Sending on channel to \(ObjectIdentifier(dataChannel)) label: \(dataChannel.label)")
             let buffer = RTCDataBuffer(data: message.data(using: .utf8)!, isBinary: false)
@@ -134,20 +138,5 @@ class SignalService {
             Logger.info("Flushed queued message: \(message)")
         }
         messageQueue.removeAll()
-    }
-
-    // MARK: - Send a notification
-    private func sendNotification(title: String, body: String) {
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
-        content.sound = .default
-
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                Logger.error("Failed to send notification: \(error)")
-            }
-        }
     }
 }

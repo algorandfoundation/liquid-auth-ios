@@ -1,10 +1,9 @@
 import Foundation
-import UIKit
 
-class AssertionApi {
+public class AssertionApi {
     private let session: URLSession
 
-    init(session: URLSession = .shared) {
+    public init(session: URLSession = .shared) {
         self.session = session
     }
 
@@ -17,7 +16,7 @@ class AssertionApi {
      * @param liquidExt - Optional Liquid extension flag
      * @return A tuple containing the response data and an optional session cookie
      */
-    func postAssertionOptions(
+    public func postAssertionOptions(
         origin: String,
         userAgent: String,
         credentialId: String,
@@ -79,7 +78,7 @@ class AssertionApi {
      * @param liquidExt - Optional Liquid extension data
      * @return The response data
      */
-    func postAssertionResult(
+    public func postAssertionResult(
         origin: String,
         userAgent: String,
         credential: String,

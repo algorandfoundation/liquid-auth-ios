@@ -2,7 +2,7 @@ import SocketIO
 import WebRTC
 import CoreImage
 
-class SignalClient {
+public class SignalClient {
     private let manager: SocketManager
     private let socket: SocketIOClient
     weak var service: SignalService?
@@ -15,7 +15,7 @@ class SignalClient {
 
     
 
-    init(url: String, service: SignalService) {
+    public init(url: String, service: SignalService) {
         self.service = service
 
         // Initialize the Socket.IO manager and client
@@ -26,7 +26,7 @@ class SignalClient {
         setupSocketListeners()
     }
 
-    func connectToPeer(
+    public func connectToPeer(
         requestId: String,
         type: String,
         iceServers: [RTCIceServer],
@@ -172,7 +172,7 @@ class SignalClient {
     }
 
     // MARK: - Connect to the Socket.IO Server
-    func connectSocket() {
+    public func connectSocket() {
         if socket.status != .connected {
             Logger.debug("Socket is not connected. Attempting to connect...")
             socket.connect()
@@ -181,7 +181,7 @@ class SignalClient {
         }
     }
 
-    func disconnectSocket() {
+    public func disconnectSocket() {
         socket.disconnect()
         handleDisconnect()
     }
@@ -379,7 +379,7 @@ class SignalClient {
     }
 
     // MARK: - Send Events to the Server, wth Swift Dictionary/JSON Encoding
-    func send(event: String, data: [String: Any]) {
+    public func send(event: String, data: [String: Any]) {
         if socket.status == .connected {
             Logger.debug("Emitting event immediately: \(event) with data: \(data)")
             socket.emit(event, data)
@@ -390,7 +390,7 @@ class SignalClient {
     }
 
     // Send event with data as a pure string
-    func send(event: String, sdp: String) {
+    public func send(event: String, sdp: String) {
         if socket.status == .connected {
             Logger.debug("Emitting event immediately: \(event) with SDP string")
             socket.emit(event, sdp)
@@ -414,19 +414,6 @@ class SignalClient {
             }
         }
         eventQueue.removeAll()
-    }
-
-    func generateQRCode(from string: String) -> UIImage? {
-        let data = string.data(using: .ascii)
-        guard let filter = CIFilter(name: "CIQRCodeGenerator") else { return nil }
-        filter.setValue(data, forKey: "inputMessage")
-        filter.setValue("Q", forKey: "inputCorrectionLevel")
-
-        guard let outputImage = filter.outputImage else { return nil }
-        let transform = CGAffineTransform(scaleX: 10, y: 10)
-        let scaledImage = outputImage.transformed(by: transform)
-
-        return UIImage(ciImage: scaledImage)
     }
 }
 

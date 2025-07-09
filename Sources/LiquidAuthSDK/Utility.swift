@@ -2,11 +2,10 @@ import Base32
 import CryptoKit
 import Foundation
 import SwiftCBOR
-import UIKit
 
-enum Utility {
+public enum Utility {
     /// Extracts the origin and request ID from a Liquid Auth URI.
-    static func extractOriginAndRequestId(from uri: String) -> (origin: String, requestId: String)? {
+    public static func extractOriginAndRequestId(from uri: String) -> (origin: String, requestId: String)? {
         guard let url = URL(string: uri),
               url.scheme == "liquid",
               let host = url.host,
@@ -19,13 +18,19 @@ enum Utility {
     }
 
     /// Constructs a user agent string based on the app and device information.
-    static func getUserAgent() -> String {
+    public static func getUserAgent() -> String {
         let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "UnknownApp"
         let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "UnknownVersion"
-        let deviceModel = UIDevice.current.model
-        let systemName = UIDevice.current.systemName
-        let systemVersion = UIDevice.current.systemVersion
-
+        let systemVersion = ProcessInfo.processInfo.operatingSystemVersionString
+        
+        return "\(appName)/\(appVersion) (\(systemVersion))"
+    }
+    
+    /// Constructs a user agent string with custom device information.
+    public static func getUserAgent(deviceModel: String, systemName: String, systemVersion: String) -> String {
+        let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "UnknownApp"
+        let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "UnknownVersion"
+        
         return "\(appName)/\(appVersion) (\(deviceModel); \(systemName) \(systemVersion))"
     }
 
@@ -121,7 +126,7 @@ enum Utility {
         }
     }
 
-    static func encodePKToEC2COSEKey(_ publicKey: Data) -> [UInt8] {
+    public static func encodePKToEC2COSEKey(_ publicKey: Data) -> [UInt8] {
         var adjustedPublicKey = publicKey
 
         // Check if the public key is 64 bytes long
@@ -157,45 +162,41 @@ enum Utility {
         }
     }
 
-    static func getAttestedCredentialData(aaguid: UUID, credentialId: Data, publicKey: Data) -> Data {
+    public static func getAttestedCredentialData(aaguid: UUID, credentialId: Data, publicKey: Data) -> Data {
         // Encode the public key into CBOR format
         let cborPublicKey = encodePKToEC2COSEKey(publicKey)
-
-        NSLog("COSE public key CBOR hex: \(Data(cborPublicKey).map { String(format: "%02x", $0) }.joined())")
-
         let credentialIdLengthData = UInt16(credentialId.count).toDataBigEndian()
         let attestedCredentialData = aaguid.toData() + credentialIdLengthData + credentialId + cborPublicKey
-        NSLog("AttestedCredentialData hex: \(attestedCredentialData.map { String(format: "%02x", $0) }.joined())")
         return attestedCredentialData
     }
 
-    static func hashSHA256(_ input: Data) -> Data {
+    public static func hashSHA256(_ input: Data) -> Data {
         return Data(SHA256.hash(data: input))
     }
 }
 
 extension UInt8 {
-    func toData() -> Data {
+    public func toData() -> Data {
         return Data([self])
     }
 }
 
 extension UInt16 {
-    func toDataBigEndian() -> Data {
+    public func toDataBigEndian() -> Data {
         var value = bigEndian
         return Data(bytes: &value, count: MemoryLayout.size(ofValue: value))
     }
 }
 
 extension UInt32 {
-    func toDataBigEndian() -> Data {
+    public func toDataBigEndian() -> Data {
         var value = bigEndian
         return Data(bytes: &value, count: MemoryLayout.size(ofValue: value))
     }
 }
 
 extension UUID {
-    func toData() -> Data {
+    public func toData() -> Data {
         var uuid = self.uuid
         return Data(bytes: &uuid, count: MemoryLayout.size(ofValue: uuid))
     }
@@ -217,7 +218,7 @@ private extension Character {
 }
 
 extension CBOR {
-    func asSwiftObject() -> Any? {
+    public func asSwiftObject() -> Any? {
         switch self {
         case let .map(map):
             var dict = [String: Any]()
@@ -246,7 +247,7 @@ extension CBOR {
         }
     }
 
-    func asStringOrNumber() -> String? {
+    public func asStringOrNumber() -> String? {
         switch self {
         case let .utf8String(str): return str
         case let .unsignedInt(n): return String(n)

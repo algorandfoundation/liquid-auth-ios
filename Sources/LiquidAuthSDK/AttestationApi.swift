@@ -1,10 +1,9 @@
 import Foundation
-import UIKit
 
-class AttestationApi {
+public class AttestationApi {
     private let session: URLSession
 
-    init(session: URLSession = .shared) {
+    public init(session: URLSession = .shared) {
         self.session = session
     }
 
@@ -16,7 +15,7 @@ class AttestationApi {
      * @param options - PublicKeyCredentialCreationOptions in JSON
      * @return A tuple containing the response data and an optional session cookie
      */
-    func postAttestationOptions(
+    public func postAttestationOptions(
         origin: String,
         userAgent: String,
         options: [String: Any]
@@ -68,13 +67,15 @@ class AttestationApi {
      * @param userAgent - User Agent for FIDO Server parsing
      * @param credential - PublicKeyCredential from Authenticator Response
      * @param liquidExt - Optional Liquid extension data
+     * @param deviceInfo - Optional device information string
      * @return The response data
      */
-    func postAttestationResult(
+    public func postAttestationResult(
         origin: String,
         userAgent: String,
         credential: [String: Any],
-        liquidExt: [String: Any]? = nil
+        liquidExt: [String: Any]? = nil,
+        deviceInfo: String? = nil
     ) async throws -> Data {
         // Construct the URL
         let path = "https://\(origin)/attestation/response"
@@ -94,8 +95,10 @@ class AttestationApi {
             payload["clientExtensionResults"] = clientExtensionResults
         }
 
-        // Add device information
-        payload["device"] = await UIDevice.current.model
+        // Add device information if provided
+        if let deviceInfo = deviceInfo {
+            payload["device"] = deviceInfo
+        }
 
         Logger.debug("AttestationApi: Full payload: \(payload)")
 
