@@ -31,5 +31,7 @@
             </dict>
         </dict>
     </dict>
+    <key>NSFaceIDUsageDescription</key>
+    <string>Use Face ID or Touch ID to authenticate your credentials.</string>
 </dict>
 </plist>

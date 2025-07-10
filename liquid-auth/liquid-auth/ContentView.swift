@@ -359,7 +359,12 @@ struct ContentView: View {
             Logger.debug("Created clientDataJSON: \(clientDataJSONBase64Url)")
 
             // Create attestationObject
-            let attestedCredData = Utility.getAttestedCredentialData(aaguid: UUID(uuidString: "1F59713A-C021-4E63-9158-2CC5FDC14E52")!, credentialId: rawId, publicKey: P256KeyPair.publicKey.rawRepresentation)
+            let attestedCredData = Utility.getAttestedCredentialData(
+                aaguid: UUID(uuidString: "1F59713A-C021-4E63-9158-2CC5FDC14E52")!,
+                credentialId: rawId,
+                publicKey: P256KeyPair.publicKey.rawRepresentation
+            )
+
             Logger.debug("created attestedCredData: \(attestedCredData.count)")
 
             let rpIdHash = Utility.hashSHA256(rpId.data(using: .utf8)!)
@@ -374,9 +379,9 @@ struct ContentView: View {
             Logger.debug("created authData: \(authData)")
 
             let attObj: [String: Any] = [
-                "fmt": "none",
                 "attStmt": [:],
                 "authData": authData.toData(),
+                "fmt": "none",
             ]
 
             let cborEncoded = try CBOR.encodeMap(attObj)
@@ -549,8 +554,8 @@ struct ContentView: View {
                 rpIdHash: rpIdHash,
                 userPresent: true,
                 userVerified: true,
-                backupEligible: false,
-                backupState: false
+                backupEligible: true,
+                backupState: true,
             ).toData()
 
             let clientDataHash = Utility.hashSHA256(clientDataJSONData)
@@ -704,7 +709,7 @@ private struct WalletInfo {
 }
 
 private func getWalletInfo(origin: String) throws -> WalletInfo {
-    let phrase = "salon zoo engage submit smile frost later decide wing sight chaos renew lizard rely canal coral scene hobby scare step bus leaf tobacco slice"
+    let phrase = "youth clog use limit else hub select cause digital oven stand bike alarm ring phone remain trigger essay royal tortoise bless goose forum reflect"
     let seed = try Mnemonic.deterministicSeedString(from: phrase)
     guard let ed25519Wallet = XHDWalletAPI(seed: seed) else {
         throw NSError(domain: "Wallet creation failed", code: -1, userInfo: nil)
@@ -715,7 +720,7 @@ private func getWalletInfo(origin: String) throws -> WalletInfo {
 
     let dp256 = DeterministicP256()
     let derivedMainKey = try dp256.genDerivedMainKeyWithBIP39(phrase: phrase)
-    let p256KeyPair = dp256.genDomainSpecificKeyPair(derivedMainKey: derivedMainKey, origin: "https://\(origin)", userHandle: address)
+    let p256KeyPair = dp256.genDomainSpecificKeyPair(derivedMainKey: derivedMainKey, origin: origin, userHandle: address)
 
     return WalletInfo(
         ed25519Wallet: ed25519Wallet,
