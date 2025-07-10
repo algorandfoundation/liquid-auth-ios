@@ -1,14 +1,14 @@
 import Foundation
 import WebRTC
 
-public protocol SignalServiceDelegate: AnyObject {
+internal protocol SignalServiceDelegate: AnyObject {
     func signalService(_ service: SignalService, didReceiveStatusUpdate title: String, message: String)
 }
 
-public class SignalService {
-    public static let shared = SignalService()
+internal class SignalService {
+    internal static let shared = SignalService()
 
-    public weak var delegate: SignalServiceDelegate?
+    internal weak var delegate: SignalServiceDelegate?
     private var signalClient: SignalClient?
     private var peerClient: PeerApi?
     var dataChannel: RTCDataChannel?
@@ -25,7 +25,7 @@ public class SignalService {
     private init() {}
 
     // MARK: - Start the signaling service
-    public func start(url: String, httpClient: URLSession) {
+    internal func start(url: String, httpClient: URLSession) {
         // Initialize the SignalClient
         signalClient = SignalClient(url: url, service: self)
         signalClient?.connectSocket()
@@ -33,7 +33,7 @@ public class SignalService {
     }
 
     // MARK: - Stop the signaling service
-    public func stop() {
+    internal func stop() {
         signalClient?.disconnectSocket()
         signalClient = nil
         peerClient = nil
@@ -43,18 +43,18 @@ public class SignalService {
     }
 
     // MARK: - Disconnect from the signaling service
-    public func disconnect() {
+    internal func disconnect() {
         signalClient?.disconnectSocket()
         delegate?.signalService(self, didReceiveStatusUpdate: "Signal Service", message: "Disconnected from the signaling server.")
     }
 
     // MARK: - Check if the signaling service is initialized
-    public var isPeerClientInitialized: Bool {
+    internal var isPeerClientInitialized: Bool {
         return peerClient != nil
     }
 
     // MARK: - Connect to a peer by request ID
-    public func connectToPeer(
+    internal func connectToPeer(
         requestId: String,
         type: String,
         origin: String,
@@ -117,7 +117,7 @@ public class SignalService {
     }
 
     // MARK: - Send a message through the data channel
-    public func sendMessage(_ message: String) {
+    internal func sendMessage(_ message: String) {
         if let dataChannel = dataChannel, dataChannel.readyState == .open {
             Logger.debug("SignalService: Sending on channel to \(ObjectIdentifier(dataChannel)) label: \(dataChannel.label)")
             let buffer = RTCDataBuffer(data: message.data(using: .utf8)!, isBinary: false)

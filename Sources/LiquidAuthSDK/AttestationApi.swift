@@ -1,9 +1,13 @@
 import Foundation
 
-public class AttestationApi {
+#if canImport(UIKit)
+import UIKit
+#endif
+
+internal class AttestationApi {
     private let session: URLSession
 
-    public init(session: URLSession = .shared) {
+    internal init(session: URLSession = .shared) {
         self.session = session
     }
 
@@ -15,7 +19,7 @@ public class AttestationApi {
      * @param options - PublicKeyCredentialCreationOptions in JSON
      * @return A tuple containing the response data and an optional session cookie
      */
-    public func postAttestationOptions(
+    internal func postAttestationOptions(
         origin: String,
         userAgent: String,
         options: [String: Any]
@@ -25,12 +29,12 @@ public class AttestationApi {
         Logger.debug("AttestationApi: POST \(path)")
         Logger.debug("AttestationApi: Request options: \(options)")
         guard let url = URL(string: path) else {
-            throw NSError(domain: "Invalid URL", code: -1, userInfo: nil)
+            throw LiquidAuthError.invalidURL(path)
         }
 
         // Serialize the options into JSON
         guard let body = try? JSONSerialization.data(withJSONObject: options, options: []) else {
-            throw NSError(domain: "Invalid JSON", code: -1, userInfo: nil)
+            throw LiquidAuthError.invalidJSON("Failed to serialize attestation options")
         }
 
         // Create the request
@@ -42,22 +46,38 @@ public class AttestationApi {
 
         Logger.debug("AttestationApi: Request body (raw): \(String(data: body, encoding: .utf8) ?? "nil")")
 
-        // Perform the request
-        let (data, response) = try await session.data(for: request)
-        Logger.debug("AttestationApi: Response data: \(String(data: data, encoding: .utf8) ?? "nil")")
+        do {
+            // Perform the request
+            let (data, response) = try await session.data(for: request)
+            Logger.debug("AttestationApi: Response data: \(String(data: data, encoding: .utf8) ?? "nil")")
 
-        // Ensure the response is an HTTPURLResponse
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw NSError(domain: "Invalid response", code: -1, userInfo: nil)
+            // Ensure the response is an HTTPURLResponse
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw LiquidAuthError.networkError(URLError(.badServerResponse))
+            }
+            
+            Logger.debug("AttestationApi: Response headers: \(httpResponse.allHeaderFields)")
+            
+            // Check for HTTP errors
+            guard 200...299 ~= httpResponse.statusCode else {
+                throw LiquidAuthError.serverError("HTTP \(httpResponse.statusCode)")
+            }
+
+            // Extract the session cookie
+            let cookies = HTTPCookie.cookies(
+                withResponseHeaderFields: httpResponse.allHeaderFields as? [String: String] ?? [:], 
+                for: url
+            )
+            let sessionCookie = cookies.first(where: { $0.name == "connect.sid" })
+            Logger.debug("AttestationApi: Session cookie: \(String(describing: sessionCookie))")
+
+            return (data, sessionCookie)
+        } catch {
+            if error is LiquidAuthError {
+                throw error
+            }
+            throw LiquidAuthError.networkError(error)
         }
-        Logger.debug("AttestationApi: Response headers: \(httpResponse.allHeaderFields)")
-
-        // Extract the session cookie
-        let cookies = HTTPCookie.cookies(withResponseHeaderFields: httpResponse.allHeaderFields as! [String: String], for: url)
-        let sessionCookie = cookies.first(where: { $0.name == "connect.sid" })
-        Logger.debug("AttestationApi: Session cookie: \(String(describing: sessionCookie))")
-
-        return (data, sessionCookie)
     }
 
     /**
@@ -70,7 +90,7 @@ public class AttestationApi {
      * @param deviceInfo - Optional device information string
      * @return The response data
      */
-    public func postAttestationResult(
+    internal func postAttestationResult(
         origin: String,
         userAgent: String,
         credential: [String: Any],
@@ -84,42 +104,46 @@ public class AttestationApi {
         if let liquidExt = liquidExt {
             Logger.debug("AttestationApi: Liquid extension: \(liquidExt)")
         }
+        
         guard let url = URL(string: path) else {
-            throw NSError(domain: "Invalid URL", code: -1, userInfo: nil)
+            throw LiquidAuthError.invalidURL(path)
         }
 
-        // Construct the payload
         var payload = credential
         if let liquidExt = liquidExt {
             let clientExtensionResults: [String: Any] = ["liquid": liquidExt]
             payload["clientExtensionResults"] = clientExtensionResults
         }
-
-        // Add device information if provided
+        
         if let deviceInfo = deviceInfo {
             payload["device"] = deviceInfo
+        } else {
+            #if canImport(UIKit) && !targetEnvironment(macCatalyst)
+            payload["device"] = UIDevice.current.model
+            #else
+            payload["device"] = "Unknown Device"
+            #endif
         }
 
         Logger.debug("AttestationApi: Full payload: \(payload)")
 
-        // Serialize the payload into JSON
         guard let body = try? JSONSerialization.data(withJSONObject: payload, options: []) else {
-            throw NSError(domain: "Invalid JSON", code: -1, userInfo: nil)
+            throw LiquidAuthError.invalidJSON("Failed to serialize attestation result")
         }
-
         Logger.debug("AttestationApi: Request body (raw): \(String(data: body, encoding: .utf8) ?? "nil")")
 
-        // Create the request
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
         request.httpBody = body
 
-        // Perform the request
-        let (data, _) = try await session.data(for: request)
-        Logger.debug("AttestationApi: Response data: \(String(data: data, encoding: .utf8) ?? "nil")")
-
-        return data
+        do {
+            let (data, _) = try await session.data(for: request)
+            Logger.debug("AttestationApi: Response data: \(String(data: data, encoding: .utf8) ?? "nil")")
+            return data
+        } catch {
+            throw LiquidAuthError.networkError(error)
+        }
     }
 }

@@ -2,7 +2,7 @@ import SocketIO
 import WebRTC
 import CoreImage
 
-public class SignalClient {
+internal class SignalClient {
     private let manager: SocketManager
     private let socket: SocketIOClient
     weak var service: SignalService?
@@ -15,7 +15,7 @@ public class SignalClient {
 
     
 
-    public init(url: String, service: SignalService) {
+    internal init(url: String, service: SignalService) {
         self.service = service
 
         // Initialize the Socket.IO manager and client
@@ -26,7 +26,7 @@ public class SignalClient {
         setupSocketListeners()
     }
 
-    public func connectToPeer(
+    internal func connectToPeer(
         requestId: String,
         type: String,
         iceServers: [RTCIceServer],
@@ -172,7 +172,7 @@ public class SignalClient {
     }
 
     // MARK: - Connect to the Socket.IO Server
-    public func connectSocket() {
+    internal func connectSocket() {
         if socket.status != .connected {
             Logger.debug("Socket is not connected. Attempting to connect...")
             socket.connect()
@@ -181,7 +181,7 @@ public class SignalClient {
         }
     }
 
-    public func disconnectSocket() {
+    internal func disconnectSocket() {
         socket.disconnect()
         handleDisconnect()
     }
@@ -379,7 +379,7 @@ public class SignalClient {
     }
 
     // MARK: - Send Events to the Server, wth Swift Dictionary/JSON Encoding
-    public func send(event: String, data: [String: Any]) {
+    internal func send(event: String, data: [String: Any]) {
         if socket.status == .connected {
             Logger.debug("Emitting event immediately: \(event) with data: \(data)")
             socket.emit(event, data)
@@ -390,7 +390,7 @@ public class SignalClient {
     }
 
     // Send event with data as a pure string
-    public func send(event: String, sdp: String) {
+    internal func send(event: String, sdp: String) {
         if socket.status == .connected {
             Logger.debug("Emitting event immediately: \(event) with SDP string")
             socket.emit(event, sdp)

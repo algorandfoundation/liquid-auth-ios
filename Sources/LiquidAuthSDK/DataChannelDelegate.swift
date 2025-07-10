@@ -1,13 +1,13 @@
 import WebRTC
 
-public class DataChannelDelegate: NSObject, RTCDataChannelDelegate {
+internal class DataChannelDelegate: NSObject, RTCDataChannelDelegate {
     private let onMessage: (String) -> Void
     private let onStateChange: (String?) -> Void?
     private let onBufferedAmountChange: ((UInt64) -> Void)?
     private let onChannelAvailable: ((RTCDataChannel) -> Void)?
     private weak var signalService: SignalService?
 
-    public init(
+    internal init(
         signalService: SignalService?,
         onMessage: @escaping (String) -> Void,
         onStateChange: ((String?) -> Void)? = nil,
@@ -22,7 +22,7 @@ public class DataChannelDelegate: NSObject, RTCDataChannelDelegate {
 
     }
 
-    public func dataChannel(_ dataChannel: RTCDataChannel, didReceiveMessageWith buffer: RTCDataBuffer) {
+    internal func dataChannel(_ dataChannel: RTCDataChannel, didReceiveMessageWith buffer: RTCDataBuffer) {
     // Ensure signalService.dataChannel is set to the active channel
     if let service = signalService, service.dataChannel !== dataChannel {
         Logger.debug("DataChannelDelegate: Setting signalService.dataChannel from didReceiveMessageWith: \(ObjectIdentifier(dataChannel))")
@@ -35,11 +35,11 @@ public class DataChannelDelegate: NSObject, RTCDataChannelDelegate {
     }
 }
 
-    public func dataChannel(_ dataChannel: RTCDataChannel, didChangeBufferedAmount amount: UInt64) {
+    internal func dataChannel(_ dataChannel: RTCDataChannel, didChangeBufferedAmount amount: UInt64) {
         onBufferedAmountChange?(amount)
     }
 
-    public func dataChannelDidChangeState(_ dataChannel: RTCDataChannel) {
+    internal func dataChannelDidChangeState(_ dataChannel: RTCDataChannel) {
         let state = dataChannel.readyState.description
         if state == "open" {
             Logger.info("✅ DataChannel: State changed to OPEN")

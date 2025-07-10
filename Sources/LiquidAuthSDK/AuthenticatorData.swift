@@ -1,25 +1,25 @@
 import Foundation
 
-public struct AuthenticatorData: Codable {
-    public let rpIdHash: Data
-    public let userPresent: Bool
-    public let userVerified: Bool
-    public let backupEligible: Bool
-    public let backupState: Bool
-    public let attestedCredentialData: Data?
-    public let extensions: Data?
-    public var signCount: UInt32
+internal struct AuthenticatorData: Codable {
+    internal let rpIdHash: Data
+    internal let userPresent: Bool
+    internal let userVerified: Bool
+    internal let backupEligible: Bool
+    internal let backupState: Bool
+    internal let attestedCredentialData: Data?
+    internal let extensions: Data?
+    internal var signCount: UInt32
 
     // Flag masks (WebAuthn spec)
-    public static let upMask: UInt8 = 1 // User present (bit 0)
-    public static let uvMask: UInt8 = 1 << 2 // User verified (bit 2)
-    public static let beMask: UInt8 = 1 << 3 // Backup eligible (bit 3)
-    public static let bsMask: UInt8 = 1 << 4 // Backup state (bit 4)
-    public static let atMask: UInt8 = 1 << 6 // Attested credential data included (bit 6)
-    public static let edMask: UInt8 = 1 << 7 // Extension data included (bit 7)
+    internal static let upMask: UInt8 = 1 // User present (bit 0)
+    internal static let uvMask: UInt8 = 1 << 2 // User verified (bit 2)
+    internal static let beMask: UInt8 = 1 << 3 // Backup eligible (bit 3)
+    internal static let bsMask: UInt8 = 1 << 4 // Backup state (bit 4)
+    internal static let atMask: UInt8 = 1 << 6 // Attested credential data included (bit 6)
+    internal static let edMask: UInt8 = 1 << 7 // Extension data included (bit 7)
 
     // General initializer
-    public init(
+    internal init(
         rpIdHash: Data,
         userPresent: Bool,
         userVerified: Bool,
@@ -40,7 +40,7 @@ public struct AuthenticatorData: Codable {
     }
 
     // Convenience for attestation
-    public static func attestation(
+    internal static func attestation(
         rpIdHash: Data,
         userPresent: Bool,
         userVerified: Bool,
@@ -63,7 +63,7 @@ public struct AuthenticatorData: Codable {
     }
 
     // Convenience for assertion
-    public static func assertion(
+    internal static func assertion(
         rpIdHash: Data,
         userPresent: Bool,
         userVerified: Bool,
@@ -84,7 +84,7 @@ public struct AuthenticatorData: Codable {
     }
 
     // Flag byte builder
-    public func createFlags() -> UInt8 {
+    internal func createFlags() -> UInt8 {
         var flags: UInt8 = 0
         if userPresent { flags |= Self.upMask }
         if userVerified { flags |= Self.uvMask }
@@ -95,7 +95,7 @@ public struct AuthenticatorData: Codable {
         return flags
     }
 
-    public func toData() -> Data {
+    internal func toData() -> Data {
         let flags = createFlags()
         let flagsData = Data([flags])
         let signCountData = signCount.toDataBigEndian()

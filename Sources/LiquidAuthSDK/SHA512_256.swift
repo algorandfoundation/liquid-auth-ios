@@ -21,8 +21,8 @@ import Foundation
 // swiftlint:disable line_length
 // swiftlint:disable comma
 
-public struct SHA512_256 {
-    public func hash(_ message: [UInt8]) -> [UInt8] {
+internal struct SHA512_256 {
+    internal func hash(_ message: [UInt8]) -> [UInt8] {
         SHA2.hash64Bit(message: message)
     }
 }

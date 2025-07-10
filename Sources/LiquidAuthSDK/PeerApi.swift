@@ -1,7 +1,7 @@
 import Foundation
 import WebRTC
 
-public class PeerApi {
+internal class PeerApi {
     private let peerConnectionFactory: RTCPeerConnectionFactory
     var peerConnection: RTCPeerConnection?
     private var peerConnectionDelegate: PeerConnectionDelegate?
@@ -11,7 +11,7 @@ public class PeerApi {
     private weak var signalService: SignalService?
 
 
-    public init(
+    internal init(
         iceServers: [RTCIceServer],
         poolSize: Int,
         signalService: SignalService?,
@@ -54,7 +54,7 @@ public class PeerApi {
     }
 
     // Create a new Peer Connection
-    public func createPeerConnection(
+    internal func createPeerConnection(
         onIceCandidate: @escaping (RTCIceCandidate) -> Void,
         onDataChannel: @escaping (RTCDataChannel) -> Void,
         onConnectionStateChange: @escaping (RTCPeerConnectionState) -> Void,
@@ -77,7 +77,7 @@ public class PeerApi {
     }
 
     // Add an ICE Candidate
-    public func addIceCandidate(_ candidate: RTCIceCandidate) throws {
+    internal func addIceCandidate(_ candidate: RTCIceCandidate) throws {
         guard let peerConnection = peerConnection else {
             throw NSError(domain: "PeerApi", code: -1, userInfo: [NSLocalizedDescriptionKey: "PeerConnection is null, ensure you are connected"])
         }
@@ -91,7 +91,7 @@ public class PeerApi {
     }
 
     // Set the Local Description
-    public func setLocalDescription(_ description: RTCSessionDescription, completion: @escaping (Error?) -> Void) {
+    internal func setLocalDescription(_ description: RTCSessionDescription, completion: @escaping (Error?) -> Void) {
         guard let peerConnection = peerConnection else {
             Logger.error("PeerAPI: PeerConnection is null, ensure you are connected")
             return
@@ -100,7 +100,7 @@ public class PeerApi {
         peerConnection.setLocalDescription(description, completionHandler: completion)
     }
 
-    public func setRemoteDescription(_ description: RTCSessionDescription, completion: @escaping (Error?) -> Void) {
+    internal func setRemoteDescription(_ description: RTCSessionDescription, completion: @escaping (Error?) -> Void) {
         guard let peerConnection = peerConnection else {
             Logger.error("PeerAPI: PeerConnection is null, ensure you are connected")
             return
@@ -116,7 +116,7 @@ public class PeerApi {
     }
 
     // Create an Offer
-    public func createOffer(completion: @escaping (RTCSessionDescription?) -> Void) {
+    internal func createOffer(completion: @escaping (RTCSessionDescription?) -> Void) {
         guard let peerConnection = peerConnection else {
             Logger.error("PeerAPI: PeerConnection is null, ensure you are connected")
             completion(nil)
@@ -133,7 +133,7 @@ public class PeerApi {
     }
 
     // Create an Answer
-    public func createAnswer(completion: @escaping (RTCSessionDescription?) -> Void) {
+    internal func createAnswer(completion: @escaping (RTCSessionDescription?) -> Void) {
         guard let peerConnection = peerConnection else {
             Logger.error("PeerAPI: PeerConnection is null, ensure you are connected")
             return
@@ -149,7 +149,7 @@ public class PeerApi {
     }
 
     // Create a Data Channel
-    public func createDataChannel(
+    internal func createDataChannel(
         label: String,
         onMessage: @escaping (String) -> Void,
         onStateChange: @escaping (String?) -> Void
@@ -173,7 +173,7 @@ public class PeerApi {
     }
 
     // Send a message through the Data Channel
-    public func send(_ message: String) {
+    internal func send(_ message: String) {
         guard let dataChannel = dataChannel else {
             Logger.error("PeerAPI: peerApi: Data channel is not available.")
             return
@@ -184,7 +184,7 @@ public class PeerApi {
     }
 
     // Close the Peer Connection
-    public func close() {
+    internal func close() {
         dataChannel?.close()
         peerConnection?.close()
         dataChannel = nil

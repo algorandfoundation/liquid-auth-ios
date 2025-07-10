@@ -256,3 +256,24 @@ extension CBOR {
         }
     }
 }
+
+// MARK: - Base64URL Extensions
+
+extension Data {
+    /// Encode Data to Base64URL string
+    public func base64URLEncodedString() -> String {
+        return self.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+    }
+    
+    /// Decode Base64URL string to Data
+    public init?(base64URLEncoded string: String) {
+        let base64 = string
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let paddedBase64 = base64 + String(repeating: "=", count: (4 - base64.count % 4) % 4)
+        self.init(base64Encoded: paddedBase64)
+    }
+}
