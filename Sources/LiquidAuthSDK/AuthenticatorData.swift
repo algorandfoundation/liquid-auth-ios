@@ -40,7 +40,7 @@ public struct AuthenticatorData: Codable {
     }
 
     // Convenience for attestation
-    internal static func attestation(
+    public static func attestation(
         rpIdHash: Data,
         userPresent: Bool,
         userVerified: Bool,
@@ -63,7 +63,7 @@ public struct AuthenticatorData: Codable {
     }
 
     // Convenience for assertion
-    internal static func assertion(
+    public static func assertion(
         rpIdHash: Data,
         userPresent: Bool,
         userVerified: Bool,
@@ -95,7 +95,7 @@ public struct AuthenticatorData: Codable {
         return flags
     }
 
-    internal func toData() -> Data {
+    public func toData() -> Data {
         let flags = createFlags()
         let flagsData = Data([flags])
         let signCountData = signCount.toDataBigEndian()
