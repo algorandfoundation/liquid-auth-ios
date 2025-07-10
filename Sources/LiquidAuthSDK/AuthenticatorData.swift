@@ -1,6 +1,6 @@
 import Foundation
 
-internal struct AuthenticatorData: Codable {
+public struct AuthenticatorData: Codable {
     internal let rpIdHash: Data
     internal let userPresent: Bool
     internal let userVerified: Bool

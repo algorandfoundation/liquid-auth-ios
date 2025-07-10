@@ -183,7 +183,7 @@ enum SHA2 {
     }
 }
 
-public extension Array {
+internal extension Array {
     func splitToChuncks(_ chunkSize: Int) -> AnyIterator<ArraySlice<Element>> {
         var offset = 0
         return AnyIterator {
