@@ -21,17 +21,16 @@ public enum Utility {
     public static func getUserAgent() -> String {
         let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "UnknownApp"
         let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "UnknownVersion"
-        let systemVersion = ProcessInfo.processInfo.operatingSystemVersionString
         
-        return "\(appName)/\(appVersion) (\(systemVersion))"
-    }
-    
-    /// Constructs a user agent string with custom device information.
-    public static func getUserAgent(deviceModel: String, systemName: String, systemVersion: String) -> String {
-        let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "UnknownApp"
-        let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "UnknownVersion"
-        
+        #if canImport(UIKit) && !targetEnvironment(macCatalyst)
+        let deviceModel = UIDevice.current.model
+        let systemName = UIDevice.current.systemName
+        let systemVersion = UIDevice.current.systemVersion
         return "\(appName)/\(appVersion) (\(deviceModel); \(systemName) \(systemVersion))"
+        #else
+        let systemVersion = ProcessInfo.processInfo.operatingSystemVersionString
+        return "\(appName)/\(appVersion) (macOS; \(systemVersion))"
+        #endif
     }
 
     public static func sha512_256(data: Data) -> Data {

@@ -87,15 +87,13 @@ internal class AttestationApi {
      * @param userAgent - User Agent for FIDO Server parsing
      * @param credential - PublicKeyCredential from Authenticator Response
      * @param liquidExt - Optional Liquid extension data
-     * @param deviceInfo - Optional device information string
      * @return The response data
      */
     internal func postAttestationResult(
         origin: String,
         userAgent: String,
         credential: [String: Any],
-        liquidExt: [String: Any]? = nil,
-        deviceInfo: String? = nil
+        liquidExt: [String: Any]? = nil
     ) async throws -> Data {
         // Construct the URL
         let path = "https://\(origin)/attestation/response"
@@ -113,16 +111,6 @@ internal class AttestationApi {
         if let liquidExt = liquidExt {
             let clientExtensionResults: [String: Any] = ["liquid": liquidExt]
             payload["clientExtensionResults"] = clientExtensionResults
-        }
-        
-        if let deviceInfo = deviceInfo {
-            payload["device"] = deviceInfo
-        } else {
-            #if canImport(UIKit) && !targetEnvironment(macCatalyst)
-            payload["device"] = UIDevice.current.model
-            #else
-            payload["device"] = "Unknown Device"
-            #endif
         }
 
         Logger.debug("AttestationApi: Full payload: \(payload)")
