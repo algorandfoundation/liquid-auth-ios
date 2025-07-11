@@ -174,19 +174,20 @@ public enum Utility {
     }
 
    public static func getDeviceModel() -> String {
-        #if canImport(UIKit) && !targetEnvironment(macCatalyst)
-        return UIDevice.current.model
-        #elseif targetEnvironment(macCatalyst)
-        return "Mac Catalyst"
-        #elseif os(macOS)
-        return "Mac"
-        #elseif os(watchOS)
-        return "Apple Watch"
-        #elseif os(tvOS)
-        return "Apple TV"
-        #else
-        return "Unknown Device"
-        #endif
+    return "iPhone"  // Hardcoded for debugging
+        // #if canImport(UIKit) && !targetEnvironment(macCatalyst)
+        // return UIDevice.current.model
+        // #elseif targetEnvironment(macCatalyst)
+        // return "Mac Catalyst"
+        // #elseif os(macOS)
+        // return "Mac"
+        // #elseif os(watchOS)
+        // return "Apple Watch"
+        // #elseif os(tvOS)
+        // return "Apple TV"
+        // #else
+        // return "Unknown Device"
+        // #endif
     } 
 }
 
