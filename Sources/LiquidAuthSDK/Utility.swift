@@ -172,6 +172,22 @@ public enum Utility {
     public static func hashSHA256(_ input: Data) -> Data {
         return Data(SHA256.hash(data: input))
     }
+
+   public static func getDeviceModel() -> String {
+        #if canImport(UIKit) && !targetEnvironment(macCatalyst)
+        return UIDevice.current.model
+        #elseif targetEnvironment(macCatalyst)
+        return "Mac Catalyst"
+        #elseif os(macOS)
+        return "Mac"
+        #elseif os(watchOS)
+        return "Apple Watch"
+        #elseif os(tvOS)
+        return "Apple TV"
+        #else
+        return "Unknown Device"
+        #endif
+    } 
 }
 
 extension UInt8 {

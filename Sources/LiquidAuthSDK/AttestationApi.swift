@@ -113,6 +113,9 @@ internal class AttestationApi {
             payload["clientExtensionResults"] = clientExtensionResults
         }
 
+        // Add device information
+        payload["device"] = Utility.getDeviceModel()
+
         Logger.debug("AttestationApi: Full payload: \(payload)")
 
         guard let body = try? JSONSerialization.data(withJSONObject: payload, options: []) else {
