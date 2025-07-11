@@ -153,7 +153,7 @@ internal class LiquidAuthImplementation {
         "clientDataJSON": clientDataJSONBase64Url,
         "attestationObject": attestationObject.base64URLEncodedString(),
       ],
-    }
+    ]
     Logger.debug("Created credential: \(credential)")
 
     // Post attestation result
