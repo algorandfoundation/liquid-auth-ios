@@ -77,7 +77,7 @@ internal class LiquidAuthImplementation {
     Logger.debug("Challenge (Base64): \(challengeBase64Url)")
 
     // Decode and sign the challenge using the provided signer
-    let challengeBytes = Data(challengeBase64Url.utf8) // Pass the base64URL string as bytes, signer will decode
+    let challengeBytes =  Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!)) // Pass the base64URL string as bytes
 
     let signature = try await challengeSigner.signLiquidAuthChallenge(challengeBytes)
 
@@ -240,7 +240,7 @@ internal class LiquidAuthImplementation {
     Logger.debug("Challenge (Base64): \(challengeBase64Url)")
 
     // Decode and sign the challenge using the provided signer
-    let challengeBytes = Data(challengeBase64Url.utf8) // Pass the base64URL string as bytes, signer will decode
+    let challengeBytes =  Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!)) // Pass the base64URL string as bytes
 
     let signature = try await challengeSigner.signLiquidAuthChallenge(challengeBytes)
 
