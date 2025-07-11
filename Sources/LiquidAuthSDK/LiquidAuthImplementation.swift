@@ -127,8 +127,8 @@ internal class LiquidAuthImplementation {
       rpIdHash: rpIdHash,
       userPresent: true,
       userVerified: true,
-      backupEligible: true,
-      backupState: true,
+      backupEligible: false,
+      backupState: false,
       signCount: 0,
       attestedCredentialData: attestedCredData,
       extensions: nil
@@ -153,7 +153,7 @@ internal class LiquidAuthImplementation {
         "clientDataJSON": clientDataJSONBase64Url,
         "attestationObject": attestationObject.base64URLEncodedString(),
       ],
-    ]
+    }
     Logger.debug("Created credential: \(credential)")
 
     // Post attestation result
@@ -277,8 +277,8 @@ internal class LiquidAuthImplementation {
       rpIdHash: rpIdHash,
       userPresent: true,
       userVerified: true,
-      backupEligible: true,
-      backupState: true
+      backupEligible: false,
+      backupState: false
     ).toData()
 
     let clientDataHash = Utility.hashSHA256(clientDataJSONData)
