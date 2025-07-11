@@ -11,19 +11,19 @@ public class Logger {
 
     public static func error(_ message: String) {
         if currentLevel.rawValue >= LogLevel.error.rawValue {
-            print("❌ [ERROR] \(message)")
+            NSLog("❌ [ERROR] %@", message)
         }
     }
 
     public static func info(_ message: String) {
         if currentLevel.rawValue >= LogLevel.info.rawValue {
-            print("ℹ️ [INFO] \(message)")
+            NSLog("ℹ️ [INFO] %@", message)
         }
     }
 
     public static func debug(_ message: String) {
         if currentLevel.rawValue >= LogLevel.debug.rawValue {
-            print("🐞 [DEBUG] \(message)")
+            NSLog("🐞 [DEBUG] %@", message)
         }
     }
 }
