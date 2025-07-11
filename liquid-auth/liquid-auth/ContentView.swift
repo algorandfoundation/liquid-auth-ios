@@ -555,7 +555,7 @@ struct ContentView: View {
                 userPresent: true,
                 userVerified: true,
                 backupEligible: true,
-                backupState: true,
+                backupState: true
             ).toData()
 
             let clientDataHash = Utility.hashSHA256(clientDataJSONData)
