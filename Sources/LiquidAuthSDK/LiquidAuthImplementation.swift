@@ -16,16 +16,6 @@ import UIKit
 /// It's currently in the example app for demonstration, but represents the internal
 /// implementation that will be packaged in the LiquidAuthSDK to hide complexity from wallet developers
 
-// MARK: - Helper Functions
-
-private func getDeviceModel() -> String {
-    #if canImport(UIKit) && !targetEnvironment(macCatalyst)
-    return UIDevice.current.model
-    #else
-    return "Unknown Device"
-    #endif
-}
-
 // MARK: - LiquidAuthSDK Internal Implementation
 
 internal class LiquidAuthImplementation {
@@ -89,7 +79,7 @@ internal class LiquidAuthImplementation {
       "requestId": requestId,
       "address": algorandAddress,
       "signature": signature.base64URLEncodedString(),
-      "device": getDeviceModel(),
+      "device": Utility.getDeviceModel(),
     ]
 
     Logger.debug("Created liquidExt JSON object: \(liquidExt)")
@@ -252,7 +242,7 @@ internal class LiquidAuthImplementation {
       "requestId": requestId,
       "address": algorandAddress,
       "signature": signature.base64URLEncodedString(),
-      "device": getDeviceModel(),
+      "device": Utility.getDeviceModel(),
     ]
 
     Logger.debug("Created liquidExt JSON object: \(liquidExt)")
