@@ -19,7 +19,7 @@ public enum Utility {
 
     /// Constructs a user agent string based on the app and device information.
     public static func getUserAgent() -> String {
-        return "LiquidAuth/1.0 (iPhone; iOS 17.0)"
+        return "liquid-auth/1.0 (iPhone; iOS 18.5)" // "LiquidAuth/1.0 (iPhone; iOS 17.0)"
         // let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "UnknownApp"
         // let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "UnknownVersion"
         
