@@ -38,36 +38,6 @@ public enum Utility {
         return (origin: host, requestId: requestId)
     }
 
-    /// Encode an Ed25519 public key into an Algorand Base32 address with checksum
-    ///
-    /// - Parameter bytes: The Ed25519 public key bytes
-    /// - Returns: Base32 encoded Algorand address string
-    /// - Throws: NSError if the address length is unexpected
-    public static func encodeAddress(bytes: Data) throws -> String {
-        let lenBytes = 32
-        let checksumLenBytes = 4
-        let expectedStrEncodedLen = 58
-
-        // compute sha512/256 checksum
-        let hash = Data(SHA512_256().hash([UInt8](bytes)))
-        let hashedAddr = hash[..<lenBytes] // Take the first 32 bytes
-
-        // take the last 4 bytes of the hashed address, and append to original bytes
-        let checksum = hashedAddr[(hashedAddr.count - checksumLenBytes)...]
-        let checksumAddr = bytes + checksum
-
-        // encodeToMsgPack addr+checksum as base32 and return. Strip padding.
-        let res = Base32.base32Encode(checksumAddr).trimmingCharacters(in: ["="])
-        if res.count != expectedStrEncodedLen {
-            throw NSError(
-                domain: "",
-                code: 0,
-                userInfo: [NSLocalizedDescriptionKey: "unexpected address length \(res.count)"]
-            )
-        }
-        return res
-    }
-
     /// Decodes a Base64URL string into bytes
     ///
     /// - Parameter base64Url: The Base64URL encoded string
