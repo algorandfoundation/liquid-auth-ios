@@ -2,6 +2,7 @@ import AuthenticationServices
 import AVFoundation
 import CryptoKit
 import deterministicP256_swift
+import Foundation
 import LocalAuthentication
 import MnemonicSwift
 import SwiftCBOR
@@ -9,7 +10,7 @@ import SwiftUI
 import WebRTC
 import x_hd_wallet_api
 
-import Foundation
+// MARK: - ContentView
 
 struct ContentView: View {
     @State private var isScanning = false
@@ -258,9 +259,10 @@ struct ContentView: View {
             let state = await ASCredentialIdentityStore.shared.state()
             if !state.isEnabled {
                 DispatchQueue.main.async {
-                    self.scannedMessage = nil
-                    self.errorMessage = "AutoFill Passwords & Passkeys is not enabled for Liquid Auth. Please enable it in Settings > General > AutoFill & Passwords."
-                    self.isLoading = false
+                    scannedMessage = nil
+                    errorMessage =
+                        "AutoFill Passwords & Passkeys is not enabled for Liquid Auth. Please enable it in Settings > General > AutoFill & Passwords."
+                    isLoading = false
                 }
                 return
             }
@@ -291,7 +293,11 @@ struct ContentView: View {
             let userAgent = Utility.getUserAgent()
 
             // Post attestation options
-            let (data, sessionCookie) = try await attestationApi.postAttestationOptions(origin: origin, userAgent: userAgent, options: options)
+            let (data, sessionCookie) = try await attestationApi.postAttestationOptions(
+                origin: origin,
+                userAgent: userAgent,
+                options: options
+            )
             Logger.debug("Response data: \(String(data: data, encoding: .utf8) ?? "Invalid data")")
             if let cookie = sessionCookie {
                 Logger.debug("Session cookie: \(cookie)")
@@ -302,11 +308,20 @@ struct ContentView: View {
                   let rp = json["rp"] as? [String: Any],
                   let rpId = rp["id"] as? String
             else {
-                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse response JSON or find the challenge/rpId field."])
+                throw NSError(
+                    domain: "com.liquidauth.error",
+                    code: -1,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: "Failed to parse response JSON or find the challenge/rpId field.",
+                    ]
+                )
             }
 
             if origin != rpId {
-                Logger.info("⚠️ Origin (\(origin)) and rpId (\(rpId)) are different. This is allowed, but make sure this is intentional.")
+                Logger
+                    .info(
+                        "⚠️ Origin (\(origin)) and rpId (\(rpId)) are different. This is allowed, but make sure this is intentional."
+                    )
             }
 
             Logger.debug("Challenge (Base64): \(challengeBase64Url)")
@@ -315,10 +330,17 @@ struct ContentView: View {
 
             // Validate and sign the challenge
             let schema = try Schema(filePath: Bundle.main.path(forResource: "auth.request", ofType: "json")!)
-            let valid = try Ed25519Wallet.validateData(data: Data(Utility.decodeBase64UrlToJSON(challengeBase64Url)!.utf8), metadata: SignMetadata(encoding: Encoding.none, schema: schema))
+            let valid = try Ed25519Wallet.validateData(
+                data: Data(Utility.decodeBase64UrlToJSON(challengeBase64Url)!.utf8),
+                metadata: SignMetadata(encoding: Encoding.none, schema: schema)
+            )
 
             guard valid == true else {
-                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Data is not valid"])
+                throw NSError(
+                    domain: "com.liquidauth.error",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "Data is not valid"]
+                )
             }
 
             let sig = try Ed25519Wallet.rawSign(
@@ -352,7 +374,11 @@ struct ContentView: View {
             guard let clientDataJSONData = try? JSONSerialization.data(withJSONObject: clientData, options: []),
                   let _ = String(data: clientDataJSONData, encoding: .utf8)
             else {
-                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create clientDataJSON"])
+                throw NSError(
+                    domain: "com.liquidauth.error",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "Failed to create clientDataJSON"]
+                )
             }
 
             let clientDataJSONBase64Url = clientDataJSONData.base64URLEncodedString()
@@ -466,7 +492,8 @@ struct ContentView: View {
 
             let assertionApi = AssertionApi()
 
-            let credentialId = Data([UInt8](Utility.hashSHA256(P256KeyPair.publicKey.rawRepresentation))).base64URLEncodedString()
+            let credentialId = Data([UInt8](Utility.hashSHA256(P256KeyPair.publicKey.rawRepresentation)))
+                .base64URLEncodedString()
 
             // Call postAssertionOptions
             let (data, sessionCookie) = try await assertionApi.postAssertionOptions(
@@ -476,7 +503,7 @@ struct ContentView: View {
             )
 
             // Handle the response
-            if let sessionCookie = sessionCookie {
+            if let sessionCookie {
                 Logger.debug("Session cookie: \(sessionCookie)")
                 // Store or use the session cookie as needed
             }
@@ -485,7 +512,11 @@ struct ContentView: View {
             guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
                   let challengeBase64Url = json["challenge"] as? String
             else {
-                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse response JSON or find the challenge field."])
+                throw NSError(
+                    domain: "com.liquidauth.error",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "Failed to parse response JSON or find the challenge field."]
+                )
             }
 
             // Support both "rp": { "id": ... } and "rpId": ...
@@ -495,11 +526,18 @@ struct ContentView: View {
             } else if let id = json["rpId"] as? String {
                 rpId = id
             } else {
-                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to find rpId in response."])
+                throw NSError(
+                    domain: "com.liquidauth.error",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "Failed to find rpId in response."]
+                )
             }
 
             if origin != rpId {
-                Logger.info("⚠️ Origin (\(origin)) and rpId (\(rpId)) are different. This is allowed, but make sure this is intentional.")
+                Logger
+                    .info(
+                        "⚠️ Origin (\(origin)) and rpId (\(rpId)) are different. This is allowed, but make sure this is intentional."
+                    )
             }
 
             Logger.debug("Response: \(String(describing: String(data: data, encoding: .utf8)))")
@@ -510,10 +548,17 @@ struct ContentView: View {
 
             // Validate and sign the challenge
             let schema = try Schema(filePath: Bundle.main.path(forResource: "auth.request", ofType: "json")!)
-            let valid = try Ed25519Wallet.validateData(data: Data(Utility.decodeBase64UrlToJSON(challengeBase64Url)!.utf8), metadata: SignMetadata(encoding: Encoding.none, schema: schema))
+            let valid = try Ed25519Wallet.validateData(
+                data: Data(Utility.decodeBase64UrlToJSON(challengeBase64Url)!.utf8),
+                metadata: SignMetadata(encoding: Encoding.none, schema: schema)
+            )
 
             guard valid == true else {
-                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Data is not valid"])
+                throw NSError(
+                    domain: "com.liquidauth.error",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "Data is not valid"]
+                )
             }
 
             let sig = try Ed25519Wallet.rawSign(
@@ -543,7 +588,11 @@ struct ContentView: View {
             guard let clientDataJSONData = try? JSONSerialization.data(withJSONObject: clientData, options: []),
                   let _ = String(data: clientDataJSONData, encoding: .utf8)
             else {
-                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create clientDataJSON"])
+                throw NSError(
+                    domain: "com.liquidauth.error",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "Failed to create clientDataJSON"]
+                )
             }
 
             let clientDataJSONBase64Url = clientDataJSONData.base64URLEncodedString()
@@ -578,10 +627,17 @@ struct ContentView: View {
             Logger.debug("Created assertion response: \(assertionResponse)")
 
             // Serialize the assertion response into a JSON string
-            guard let assertionResponseData = try? JSONSerialization.data(withJSONObject: assertionResponse, options: []),
-                  let assertionResponseJSON = String(data: assertionResponseData, encoding: .utf8)
+            guard let assertionResponseData = try? JSONSerialization.data(
+                withJSONObject: assertionResponse,
+                options: []
+            ),
+                let assertionResponseJSON = String(data: assertionResponseData, encoding: .utf8)
             else {
-                throw NSError(domain: "com.liquidauth.error", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to serialize assertion response"])
+                throw NSError(
+                    domain: "com.liquidauth.error",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "Failed to serialize assertion response"]
+                )
             }
 
             // Post the assertion result
@@ -672,7 +728,7 @@ struct ContentView: View {
                     }
 
                     DispatchQueue.main.async {
-                        self.scannedMessage = displayMessage
+                        scannedMessage = displayMessage
                     }
                 },
                 onStateChange: { state in
@@ -690,7 +746,7 @@ struct ContentView: View {
         address: String,
         signature: String
     ) -> [String: Any] {
-        return [
+        [
             "type": "algorand",
             "requestId": requestId,
             "address": address,
@@ -699,6 +755,8 @@ struct ContentView: View {
         ]
     }
 }
+
+// MARK: - WalletInfo
 
 private struct WalletInfo {
     let ed25519Wallet: XHDWalletAPI
@@ -709,7 +767,8 @@ private struct WalletInfo {
 }
 
 private func getWalletInfo(origin: String) throws -> WalletInfo {
-    let phrase = "youth clog use limit else hub select cause digital oven stand bike alarm ring phone remain trigger essay royal tortoise bless goose forum reflect"
+    let phrase =
+        "youth clog use limit else hub select cause digital oven stand bike alarm ring phone remain trigger essay royal tortoise bless goose forum reflect"
     let seed = try Mnemonic.deterministicSeedString(from: phrase)
     guard let ed25519Wallet = XHDWalletAPI(seed: seed) else {
         throw NSError(domain: "Wallet creation failed", code: -1, userInfo: nil)
@@ -720,7 +779,11 @@ private func getWalletInfo(origin: String) throws -> WalletInfo {
 
     let dp256 = DeterministicP256()
     let derivedMainKey = try dp256.genDerivedMainKeyWithBIP39(phrase: phrase)
-    let p256KeyPair = dp256.genDomainSpecificKeyPair(derivedMainKey: derivedMainKey, origin: origin, userHandle: address)
+    let p256KeyPair = dp256.genDomainSpecificKeyPair(
+        derivedMainKey: derivedMainKey,
+        origin: origin,
+        userHandle: address
+    )
 
     return WalletInfo(
         ed25519Wallet: ed25519Wallet,
@@ -834,7 +897,7 @@ private func savePasskeyIdentity(
     ASCredentialIdentityStore.shared.saveCredentialIdentities([passkeyIdentity]) { success, error in
         if success {
             Logger.info("✅ Passkey identity saved to identity store!")
-        } else if let error = error {
+        } else if let error {
             Logger.error("❌ Failed to save passkey identity: \(error)")
         }
     }
