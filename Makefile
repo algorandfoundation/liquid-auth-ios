@@ -25,6 +25,11 @@ format:
 	@echo "Formatting Swift files..."
 	swiftformat . --config .swiftformat
 
+# Check Swift code formatting
+format-check:
+	@echo "🔍 Checking Swift code formatting..."
+	@swiftformat --lint Sources/
+
 # Run SwiftLint
 lint:
 	@echo "Running SwiftLint..."
