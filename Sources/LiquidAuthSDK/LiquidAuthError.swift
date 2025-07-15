@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 Algorand Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import Foundation
 
 public enum LiquidAuthError: Error, LocalizedError {
@@ -10,27 +26,27 @@ public enum LiquidAuthError: Error, LocalizedError {
     case missingRequiredField(String)
     case serverError(String)
     case userCanceled
-    
+
     public var errorDescription: String? {
         switch self {
-        case .invalidURL(let url):
-            return "Invalid URL: \(url)"
-        case .invalidJSON(let context):
-            return "Invalid JSON: \(context)"
-        case .networkError(let error):
-            return "Network error: \(error.localizedDescription)"
-        case .authenticationFailed(let reason):
-            return "Authentication failed: \(reason)"
-        case .signingFailed(let error):
-            return "Signing failed: \(error.localizedDescription)"
+        case let .invalidURL(url):
+            "Invalid URL: \(url)"
+        case let .invalidJSON(context):
+            "Invalid JSON: \(context)"
+        case let .networkError(error):
+            "Network error: \(error.localizedDescription)"
+        case let .authenticationFailed(reason):
+            "Authentication failed: \(reason)"
+        case let .signingFailed(error):
+            "Signing failed: \(error.localizedDescription)"
         case .invalidChallenge:
-            return "Invalid challenge received"
-        case .missingRequiredField(let field):
-            return "Missing required field: \(field)"
-        case .serverError(let message):
-            return "Server error: \(message)"
+            "Invalid challenge received"
+        case let .missingRequiredField(field):
+            "Missing required field: \(field)"
+        case let .serverError(message):
+            "Server error: \(message)"
         case .userCanceled:
-            return "Operation was canceled by user"
+            "Operation was canceled by user"
         }
     }
 }

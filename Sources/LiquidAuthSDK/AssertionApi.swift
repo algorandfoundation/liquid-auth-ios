@@ -1,22 +1,39 @@
+/*
+ * Copyright 2025 Algorand Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import Foundation
 
-internal class AssertionApi {
+class AssertionApi {
     private let session: URLSession
 
-    internal init(session: URLSession = .shared) {
+    init(session: URLSession = .shared) {
         self.session = session
     }
 
     /**
      * POST request to retrieve PublicKeyCredentialRequestOptions
      *
-     * @param origin - Base URL for the service
-     * @param userAgent - User Agent for FIDO Server parsing
-     * @param credentialId - Credential ID for the request
-     * @param liquidExt - Optional Liquid extension flag
-     * @return A tuple containing the response data and an optional session cookie
+     * - Parameters:
+     *   - origin: Base URL for the service
+     *   - userAgent: User Agent for FIDO Server parsing
+     *   - credentialId: Credential ID for the request
+     *   - liquidExt: Optional Liquid extension flag
+     * - Returns: A tuple containing the response data and an optional session cookie
      */
-    internal func postAssertionOptions(
+    func postAssertionOptions(
         origin: String,
         userAgent: String,
         credentialId: String,
@@ -26,14 +43,14 @@ internal class AssertionApi {
         Logger.debug("AssertionApi: POST \(path)")
         Logger.debug("AssertionApi: credentialId: \(credentialId)")
         Logger.debug("AssertionApi: liquidExt: \(String(describing: liquidExt))")
-        
+
         guard let url = URL(string: path) else {
             throw LiquidAuthError.invalidURL(path)
         }
 
         // Construct the payload
         var payload: [String: Any] = [:]
-        if let liquidExt = liquidExt {
+        if let liquidExt {
             payload["extensions"] = liquidExt
         }
         Logger.debug("AssertionApi: Request payload: \(payload)")
@@ -61,9 +78,9 @@ internal class AssertionApi {
                 throw LiquidAuthError.networkError(URLError(.badServerResponse))
             }
             Logger.debug("AssertionApi: Response headers: \(httpResponse.allHeaderFields)")
-            
+
             // Check for HTTP errors
-            guard 200...299 ~= httpResponse.statusCode else {
+            guard 200 ... 299 ~= httpResponse.statusCode else {
                 throw LiquidAuthError.serverError("HTTP \(httpResponse.statusCode)")
             }
 
@@ -85,15 +102,16 @@ internal class AssertionApi {
     }
 
     /**
-     * POST request to register a PublicKeyCredential
+     * POST request to send the PublicKeyCredential in response to assertion
      *
-     * @param origin - Base URL for the service
-     * @param userAgent - User Agent for FIDO Server parsing
-     * @param credential - PublicKeyCredential from Authenticator Response
-     * @param liquidExt - Optional Liquid extension data
-     * @return The response data
+     * - Parameters:
+     *   - origin: Base URL for the service
+     *   - userAgent: User Agent for FIDO Server parsing
+     *   - credential: PublicKeyCredential from Authenticator Response (JSON string)
+     *   - liquidExt: Optional Liquid extension data
+     * - Returns: The response data
      */
-    internal func postAssertionResult(
+    func postAssertionResult(
         origin: String,
         userAgent: String,
         credential: String,
@@ -102,20 +120,21 @@ internal class AssertionApi {
         let path = "https://\(origin)/assertion/response"
         Logger.debug("AssertionApi: POST \(path)")
         Logger.debug("AssertionApi: credential: \(credential)")
-        if let liquidExt = liquidExt {
+        if let liquidExt {
             Logger.debug("AssertionApi: Liquid extension: \(liquidExt)")
         }
-        
+
         guard let url = URL(string: path) else {
             throw LiquidAuthError.invalidURL(path)
         }
 
         guard let credentialData = credential.data(using: .utf8),
-              var payload = try? JSONSerialization.jsonObject(with: credentialData, options: []) as? [String: Any] else {
+              var payload = try? JSONSerialization.jsonObject(with: credentialData, options: []) as? [String: Any]
+        else {
             throw LiquidAuthError.invalidJSON("Invalid credential JSON")
         }
 
-        if let liquidExt = liquidExt {
+        if let liquidExt {
             payload["clientExtensionResults"] = ["liquid": liquidExt]
         }
         Logger.debug("AssertionApi: Full payload: \(payload)")

@@ -1,13 +1,31 @@
+/*
+ * Copyright 2025 Algorand Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import WebRTC
 
-internal class DataChannelDelegate: NSObject, RTCDataChannelDelegate {
+// MARK: - DataChannelDelegate
+
+class DataChannelDelegate: NSObject, RTCDataChannelDelegate {
     private let onMessage: (String) -> Void
     private let onStateChange: (String?) -> Void?
     private let onBufferedAmountChange: ((UInt64) -> Void)?
     private let onChannelAvailable: ((RTCDataChannel) -> Void)?
     private weak var signalService: SignalService?
 
-    internal init(
+    init(
         signalService: SignalService?,
         onMessage: @escaping (String) -> Void,
         onStateChange: ((String?) -> Void)? = nil,
@@ -19,27 +37,30 @@ internal class DataChannelDelegate: NSObject, RTCDataChannelDelegate {
         self.onStateChange = onStateChange!
         self.onBufferedAmountChange = onBufferedAmountChange
         self.onChannelAvailable = onChannelAvailable
-
     }
 
-    internal func dataChannel(_ dataChannel: RTCDataChannel, didReceiveMessageWith buffer: RTCDataBuffer) {
-    // Ensure signalService.dataChannel is set to the active channel
-    if let service = signalService, service.dataChannel !== dataChannel {
-        Logger.debug("DataChannelDelegate: Setting signalService.dataChannel from didReceiveMessageWith: \(ObjectIdentifier(dataChannel))")
-        service.dataChannel = dataChannel
+    func dataChannel(_ dataChannel: RTCDataChannel, didReceiveMessageWith buffer: RTCDataBuffer) {
+        // Ensure signalService.dataChannel is set to the active channel
+        if let service = signalService, service.dataChannel !== dataChannel {
+            Logger
+                .debug(
+                    "DataChannelDelegate: Setting signalService.dataChannel from " +
+                        "didReceiveMessageWith: \(ObjectIdentifier(dataChannel))"
+                )
+            service.dataChannel = dataChannel
+        }
+        onChannelAvailable?(dataChannel)
+        if let message = String(data: buffer.data, encoding: .utf8) {
+            Logger.debug("💬 DataChannel: Received message: \(message) on channel: \(ObjectIdentifier(dataChannel))")
+            onMessage(message)
+        }
     }
-    onChannelAvailable?(dataChannel)
-    if let message = String(data: buffer.data, encoding: .utf8) {
-        Logger.debug("💬 DataChannel: Received message: \(message) on channel: \(ObjectIdentifier(dataChannel))")
-        onMessage(message)
-    }
-}
 
-    internal func dataChannel(_ dataChannel: RTCDataChannel, didChangeBufferedAmount amount: UInt64) {
+    func dataChannel(_: RTCDataChannel, didChangeBufferedAmount amount: UInt64) {
         onBufferedAmountChange?(amount)
     }
 
-    internal func dataChannelDidChangeState(_ dataChannel: RTCDataChannel) {
+    func dataChannelDidChangeState(_ dataChannel: RTCDataChannel) {
         let state = dataChannel.readyState.description
         if state == "open" {
             Logger.info("✅ DataChannel: State changed to OPEN")

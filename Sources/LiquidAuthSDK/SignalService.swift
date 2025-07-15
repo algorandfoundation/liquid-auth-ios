@@ -1,14 +1,34 @@
+/*
+ * Copyright 2025 Algorand Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import Foundation
 import WebRTC
 
-internal protocol SignalServiceDelegate: AnyObject {
+// MARK: - SignalServiceDelegate
+
+protocol SignalServiceDelegate: AnyObject {
     func signalService(_ service: SignalService, didReceiveStatusUpdate title: String, message: String)
 }
 
-internal class SignalService {
-    internal static let shared = SignalService()
+// MARK: - SignalService
 
-    internal weak var delegate: SignalServiceDelegate?
+class SignalService {
+    static let shared = SignalService()
+
+    weak var delegate: SignalServiceDelegate?
     private var signalClient: SignalClient?
     private var peerClient: PeerApi?
     var dataChannel: RTCDataChannel?
@@ -22,18 +42,28 @@ internal class SignalService {
 
     var currentPeerType: String? // "offer" or "answer"
 
-    private init() {}
+    private init() { }
 
-    // MARK: - Start the signaling service
-    internal func start(url: String, httpClient: URLSession) {
+    // MARK: - Public Methods
+
+    /// Starts the signaling service
+    ///
+    /// - Parameters:
+    ///   - url: The signaling server URL
+    ///   - httpClient: URLSession for HTTP communications
+    func start(url: String, httpClient _: URLSession) {
         // Initialize the SignalClient
         signalClient = SignalClient(url: url, service: self)
         signalClient?.connectSocket()
-        delegate?.signalService(self, didReceiveStatusUpdate: "Signal Service", message: "Service started successfully.")
+        delegate?.signalService(
+            self,
+            didReceiveStatusUpdate: "Signal Service",
+            message: "Service started successfully."
+        )
     }
 
-    // MARK: - Stop the signaling service
-    internal func stop() {
+    /// Stops the signaling service and cleans up resources
+    func stop() {
         signalClient?.disconnectSocket()
         signalClient = nil
         peerClient = nil
@@ -42,19 +72,32 @@ internal class SignalService {
         delegate?.signalService(self, didReceiveStatusUpdate: "Signal Service", message: "Service stopped.")
     }
 
-    // MARK: - Disconnect from the signaling service
-    internal func disconnect() {
+    /// Disconnects from the signaling service
+    func disconnect() {
         signalClient?.disconnectSocket()
-        delegate?.signalService(self, didReceiveStatusUpdate: "Signal Service", message: "Disconnected from the signaling server.")
+        delegate?.signalService(
+            self,
+            didReceiveStatusUpdate: "Signal Service",
+            message: "Disconnected from the signaling server."
+        )
     }
 
     // MARK: - Check if the signaling service is initialized
-    internal var isPeerClientInitialized: Bool {
-        return peerClient != nil
+
+    var isPeerClientInitialized: Bool {
+        peerClient != nil
     }
 
-    // MARK: - Connect to a peer by request ID
-    internal func connectToPeer(
+    /// Connects to a peer using WebRTC signaling
+    ///
+    /// - Parameters:
+    ///   - requestId: Unique identifier for the peer connection
+    ///   - type: Connection type ("offer" or "answer")
+    ///   - origin: Origin domain for the connection
+    ///   - iceServers: ICE servers for NAT traversal
+    ///   - onMessage: Callback for received messages
+    ///   - onStateChange: Callback for connection state changes
+    func connectToPeer(
         requestId: String,
         type: String,
         origin: String,
@@ -62,7 +105,7 @@ internal class SignalService {
         onMessage: @escaping (String) -> Void,
         onStateChange: @escaping (String?) -> Void
     ) {
-        self.currentPeerType = type
+        currentPeerType = type
 
         signalClient?.disconnectSocket()
         signalClient = nil
@@ -74,9 +117,9 @@ internal class SignalService {
 
         // Wait for socket connection before starting signaling
         signalClient?.onSocketConnected = { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             Logger.debug("Socket connected, now starting WebRTC signaling.")
-            _ = self.signalClient?.connectToPeer(
+            _ = signalClient?.connectToPeer(
                 requestId: requestId,
                 type: type,
                 iceServers: iceServers,
@@ -86,7 +129,7 @@ internal class SignalService {
                     Logger.debug("Data channel is open and ready: \(dataChannel.label)")
                     if dataChannel.readyState == .open {
                         self?.flushMessageQueue()
-                        for i in 0..<10 {
+                        for i in 0 ..< 10 {
                             DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.5) {
                                 self?.sendMessage("ping")
                             }
@@ -99,16 +142,20 @@ internal class SignalService {
                 onStateChange: onStateChange
             )
 
-            self.peerClient = self.signalClient?.peerClient
-            self.peerConnection = self.peerClient?.peerConnection
+            peerClient = signalClient?.peerClient
+            peerConnection = peerClient?.peerConnection
 
-            if let peerConnection = self.peerConnection {
+            if let peerConnection {
                 Logger.debug("Peer connection state: \(peerConnection.connectionState.rawValue)")
             } else {
                 Logger.error("Peer connection is nil.")
             }
 
-            self.delegate?.signalService(self, didReceiveStatusUpdate: "Peer Connection", message: "Connected to peer with request ID: \(requestId).")
+            delegate?.signalService(
+                self,
+                didReceiveStatusUpdate: "Peer Connection",
+                message: "Connected to peer with request ID: \(requestId)."
+            )
         }
 
         signalClient?.connectSocket()
@@ -116,10 +163,15 @@ internal class SignalService {
         Logger.debug("Waiting for socket to connect before signaling.")
     }
 
-    // MARK: - Send a message through the data channel
-    internal func sendMessage(_ message: String) {
-        if let dataChannel = dataChannel, dataChannel.readyState == .open {
-            Logger.debug("SignalService: Sending on channel to \(ObjectIdentifier(dataChannel)) label: \(dataChannel.label)")
+    /// Sends a message through the data channel
+    ///
+    /// - Parameter message: The message to send
+    func sendMessage(_ message: String) {
+        if let dataChannel, dataChannel.readyState == .open {
+            Logger
+                .debug(
+                    "SignalService: Sending on channel to \(ObjectIdentifier(dataChannel)) label: \(dataChannel.label)"
+                )
             let buffer = RTCDataBuffer(data: message.data(using: .utf8)!, isBinary: false)
             dataChannel.sendData(buffer)
             Logger.info("Message sent: \(message)")
@@ -129,9 +181,9 @@ internal class SignalService {
         }
     }
 
-    // Flush queued messages when the data channel becomes available
+    /// Flushes queued messages when the data channel becomes available
     private func flushMessageQueue() {
-        guard let dataChannel = dataChannel else { return }
+        guard let dataChannel else { return }
         for message in messageQueue {
             let buffer = RTCDataBuffer(data: message.data(using: .utf8)!, isBinary: false)
             dataChannel.sendData(buffer)

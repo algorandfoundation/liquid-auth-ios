@@ -24,6 +24,9 @@ let package = Package(
         ),
         .package(url: "https://github.com/norio-nomura/Base32.git", from: "0.5.4"),
         .package(url: "https://github.com/stasel/WebRTC.git", from: "138.0.0"),
+        // Linting and Formatting
+        .package(url: "https://github.com/realm/SwiftLint.git", from: "0.54.0"),
+        .package(url: "https://github.com/nicklockwood/SwiftFormat.git", from: "0.52.0"),
     ],
     targets: [
         .target(
@@ -41,7 +44,8 @@ let package = Package(
         ),
         .testTarget(
             name: "LiquidAuthSDKTests",
-            dependencies: ["LiquidAuthSDK"]
+            dependencies: ["LiquidAuthSDK"],
+            path: "Tests/LiquidAuthSDKTests"
         ),
     ]
 )

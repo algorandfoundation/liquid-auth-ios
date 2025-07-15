@@ -1,8 +1,26 @@
+/*
+ * Copyright 2025 Algorand Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import CoreImage
 import SocketIO
 import WebRTC
-import CoreImage
 
-internal class SignalClient {
+// MARK: - SignalClient
+
+class SignalClient {
     private let manager: SocketManager
     private let socket: SocketIOClient
     weak var service: SignalService?
@@ -13,20 +31,19 @@ internal class SignalClient {
     private var dataChannelDelegates: [RTCDataChannel: DataChannelDelegate] = [:]
     var onSocketConnected: (() -> Void)?
 
-    
-
-    internal init(url: String, service: SignalService) {
+    init(url: String, service: SignalService) {
         self.service = service
 
         // Initialize the Socket.IO manager and client
-        self.manager = SocketManager(socketURL: URL(string: "https://\(url)")!, config: [.log(false), .compress])
-        self.socket = manager.defaultSocket
+        manager = SocketManager(socketURL: URL(string: "https://\(url)")!, config: [.log(false), .compress])
+        socket = manager.defaultSocket
 
         // Set up event listeners
         setupSocketListeners()
     }
 
-    internal func connectToPeer(
+    // swiftlint:disable:next function_body_length
+    func connectToPeer(
         requestId: String,
         type: String,
         iceServers: [RTCIceServer],
@@ -57,13 +74,21 @@ internal class SignalClient {
                         Logger.debug("SignalClient: Data channel state changed: \(state ?? "unknown")")
                         if state == "open" {
                             Logger.info("✅ SignalClient: Open and ready: \(dataChannel.label)")
-                            Logger.debug("SignalService: Setting dataChannel to \(ObjectIdentifier(dataChannel)) label: \(dataChannel.label)")
+                            Logger
+                                .debug(
+                                    "SignalService: Setting dataChannel to " +
+                                        "\(ObjectIdentifier(dataChannel)) label: \(dataChannel.label)"
+                                )
                             onDataChannelOpen(dataChannel)
                         }
                     },
                     onChannelAvailable: { [weak self] channel in
                         if self?.service?.dataChannel !== channel {
-                            Logger.debug("SignalClient: Setting dataChannel from didReceiveMessageWith: \(ObjectIdentifier(channel))")
+                            Logger
+                                .debug(
+                                    "SignalClient: Setting dataChannel from " +
+                                        "didReceiveMessageWith: \(ObjectIdentifier(channel))"
+                                )
                             self?.service?.dataChannel = channel
                         }
                     }
@@ -74,23 +99,27 @@ internal class SignalClient {
 
                 if dataChannel.readyState == .open {
                     Logger.info("✅ SignalClient: Open and ready (immediate): \(dataChannel.label)")
-                    Logger.debug("SignalService: Setting dataChannel to \(ObjectIdentifier(dataChannel)) label: \(dataChannel.label)")
+                    Logger
+                        .debug(
+                            "SignalService: Setting dataChannel to " +
+                                "\(ObjectIdentifier(dataChannel)) label: \(dataChannel.label)"
+                        )
                     onDataChannelOpen(dataChannel)
                 }
             },
             onIceCandidate: { [weak self] candidate in
-                guard let self = self else { return }
+                guard let self else { return }
                 Logger.debug("Generated ICE candidate: \(candidate)")
                 let candidateEvent = (type == "offer") ? "answer-candidate" : "offer-candidate"
-                self.send(event: candidateEvent, data: [
+                send(event: candidateEvent, data: [
                     "candidate": candidate.sdp,
                     "sdpMid": candidate.sdpMid ?? "",
-                    "sdpMLineIndex": candidate.sdpMLineIndex
+                    "sdpMLineIndex": candidate.sdpMLineIndex,
                 ])
             }
         )
 
-        if (peerClient?.peerConnection) != nil {
+        if peerClient?.peerConnection != nil {
             Logger.info("SignalClient: Peer connection created successfully.")
         } else {
             Logger.error("SignalClient: Failed to create peer connection!")
@@ -99,9 +128,9 @@ internal class SignalClient {
         if type == "answer" {
             // Initiator logic (creates and sends offer)
             Logger.info("Answer (initiator): sending link request")
-            self.send(event: "link", data: ["requestId": requestId])
+            send(event: "link", data: ["requestId": requestId])
 
-            guard let peerClient = peerClient, let _ = peerClient.peerConnection else {
+            guard let peerClient, peerClient.peerConnection != nil else {
                 Logger.error("PeerClient or its peerConnection is nil!")
                 return nil
             }
@@ -113,13 +142,13 @@ internal class SignalClient {
             )
 
             peerClient.createOffer { offer in
-                guard let offer = offer else {
+                guard let offer else {
                     Logger.error("Failed to create offer: Offer is nil")
                     return
                 }
                 Logger.info("Answer (initiator): Setting local description")
                 peerClient.setLocalDescription(offer) { error in
-                    if let error = error {
+                    if let error {
                         Logger.error("Failed to set local description: \(error)")
                     } else {
                         Logger.debug("Answer (initiator): Sending offer description")
@@ -131,48 +160,52 @@ internal class SignalClient {
         } else if type == "offer" {
             // Responder logic (waits for offer, then sends answer)
             Logger.info("Offer (responder): Waiting for remote offer")
-            self.send(event: "link", data: ["requestId": requestId])
+            send(event: "link", data: ["requestId": requestId])
 
             // Listen for the offer-description event (only for responder)
-            self.socket.off("offer-description")
-            self.socket.on("offer-description") { [weak self] data, _ in
-                guard let self = self, let eventData = data.first as? [String: Any],
+            socket.off("offer-description")
+            socket.on("offer-description") { [weak self] data, _ in
+                guard let self, let eventData = data.first as? [String: Any],
                       let sdp = eventData["sdp"] as? String,
                       let type = sdpType(from: eventData["type"] as? String) else { return }
                 Logger.info("Offer (responder): Received SDP type: \(type) : \(sdp)")
                 let sessionDescription = RTCSessionDescription(type: type, sdp: sdp)
 
-                self.peerClient?.setRemoteDescription(sessionDescription, completion: { error in
-                    if let error = error {
+                peerClient?.setRemoteDescription(sessionDescription, completion: { error in
+                    if let error {
                         Logger.error("Failed to set remote description: \(error)")
                     } else {
                         Logger.info("Offer (responder): Remote description set successfully.")
 
                         self.peerClient?.createAnswer { answer in
-                            guard let answer = answer else {
+                            guard let answer else {
                                 Logger.error("Failed to create answer: Answer is nil")
                                 return
                             }
                             Logger.info("Offer (responder): Setting local description")
                             self.peerClient?.setLocalDescription(answer) { error in
-                                if let error = error {
+                                if let error {
                                     Logger.error("Failed to set local description: \(error)")
                                 } else {
                                     Logger.info("Offer (responder): Sending answer description")
-                                    self.send(event: "answer-description", sdp: answer.sdp)//["type": stringFromSdpType(answer.type), "sdp": answer.sdp])
+                                    self
+                                        .send(event: "answer-description",
+                                              sdp: answer
+                                                  .sdp) // ["type": stringFromSdpType(answer.type), "sdp": answer.sdp])
                                 }
                             }
                         }
                     }
                 })
-            }   
+            }
             return nil
         }
         return nil
     }
 
     // MARK: - Connect to the Socket.IO Server
-    internal func connectSocket() {
+
+    func connectSocket() {
         if socket.status != .connected {
             Logger.debug("Socket is not connected. Attempting to connect...")
             socket.connect()
@@ -181,7 +214,7 @@ internal class SignalClient {
         }
     }
 
-    internal func disconnectSocket() {
+    func disconnectSocket() {
         socket.disconnect()
         handleDisconnect()
     }
@@ -193,6 +226,7 @@ internal class SignalClient {
     }
 
     // MARK: - Set Up Socket.IO Listeners
+
     private func setupSocketListeners() {
         socket.on(clientEvent: .connect) { _, _ in
             Logger.debug("Socket.IO connected")
@@ -205,43 +239,43 @@ internal class SignalClient {
             self.handleDisconnect()
         }
 
-        if self.service?.currentPeerType == "offer" {
+        if service?.currentPeerType == "offer" {
             socket.on("offer-description") { [weak self] data, _ in
-                guard let self = self, let eventData = data.first as? [String: Any] else { return }
+                guard let self, let eventData = data.first as? [String: Any] else { return }
                 Logger.debug("Received SDP offer: \(eventData)")
-                self.handleOfferDescription(eventData)
+                handleOfferDescription(eventData)
             }
         }
 
         socket.on("answer-description") { [weak self] data, _ in
-            guard let self = self else { return }
+            guard let self else { return }
             // Try to handle as dictionary first, then as string
             if let eventData = data.first as? [String: Any] {
                 Logger.debug("Received SDP answer as dictionary: \(eventData)")
-                self.handleAnswerDescription(eventData)
+                handleAnswerDescription(eventData)
             } else if let sdp = data.first as? String {
                 Logger.debug("Received SDP answer as string: \(sdp)")
-                self.handleAnswerDescription(sdp)
+                handleAnswerDescription(sdp)
             } else {
                 Logger.error("Received SDP answer in unknown format: \(data)")
             }
         }
 
         socket.on("candidate") { [weak self] data, _ in
-            guard let self = self, let eventData = data.first as? [String: Any] else { return }
+            guard let self, let eventData = data.first as? [String: Any] else { return }
             Logger.debug("Received ICE candidate: \(eventData)")
-            self.handleIceCandidate(eventData)
+            handleIceCandidate(eventData)
         }
 
         socket.on("offer-candidate") { [weak self] data, _ in
-            guard let self = self, let eventData = data.first as? [String: Any] else { return }
+            guard let self, let eventData = data.first as? [String: Any] else { return }
             Logger.debug("Received offer ICE candidate: \(eventData)")
-            self.handleIceCandidate(eventData)
+            handleIceCandidate(eventData)
         }
         socket.on("answer-candidate") { [weak self] data, _ in
-            guard let self = self, let eventData = data.first as? [String: Any] else { return }
+            guard let self, let eventData = data.first as? [String: Any] else { return }
             Logger.debug("Received answer ICE candidate: \(eventData)")
-            self.handleIceCandidate(eventData)
+            handleIceCandidate(eventData)
         }
 
         socket.on("link-response") { data, _ in
@@ -254,9 +288,11 @@ internal class SignalClient {
     }
 
     // MARK: - Handle WebSocket Messages
+
     private func handleOfferDescription(_ data: [String: Any]) {
         guard let sdp = data["sdp"] as? String,
-              let type = sdpType(from: data["type"] as? String) else {
+              let type = sdpType(from: data["type"] as? String)
+        else {
             Logger.error("Received SDP is missing or invalid.")
             return
         }
@@ -272,18 +308,18 @@ internal class SignalClient {
         Logger.debug("Setting remote description with session description: \(sessionDescription)")
 
         peerClient?.setRemoteDescription(sessionDescription, completion: { error in
-            if let error = error {
+            if let error {
                 Logger.error("Failed to set remote description: \(error)")
             } else {
                 Logger.debug("Remote description set successfully.")
                 self.processBufferedCandidates()
                 self.peerClient?.createAnswer { answer in
-                    guard let answer = answer else {
+                    guard let answer else {
                         Logger.error("Failed to create answer: Answer is nil")
                         return
                     }
                     self.peerClient?.setLocalDescription(answer) { error in
-                        if let error = error {
+                        if let error {
                             Logger.error("Failed to set local description: \(error)")
                         } else {
                             Logger.debug("Local description set successfully.")
@@ -297,7 +333,8 @@ internal class SignalClient {
 
     private func handleAnswerDescription(_ data: [String: Any]) {
         guard let sdp = data["sdp"] as? String,
-            let type = sdpType(from: data["type"] as? String) else {
+              let type = sdpType(from: data["type"] as? String)
+        else {
             Logger.error("Received SDP is missing or invalid.")
             return
         }
@@ -310,7 +347,7 @@ internal class SignalClient {
         }
 
         peerClient?.setRemoteDescription(sessionDescription, completion: { error in
-            if let error = error {
+            if let error {
                 Logger.error("Failed to set remote description: \(error)")
             } else {
                 self.processBufferedCandidates()
@@ -329,7 +366,7 @@ internal class SignalClient {
 
         Logger.debug("handleAnswerDescription SDP: Setting remote description with session description.")
         peerClient?.setRemoteDescription(sessionDescription, completion: { error in
-            if let error = error {
+            if let error {
                 Logger.error("Failed to set remote description: \(error)")
             } else {
                 self.processBufferedCandidates()
@@ -339,8 +376,8 @@ internal class SignalClient {
 
     private func handleIceCandidate(_ data: [String: Any]) {
         guard let candidate = data["candidate"] as? String,
-            let sdpMid = data["sdpMid"] as? String,
-            let sdpMLineIndex = data["sdpMLineIndex"] as? Int else { return }
+              let sdpMid = data["sdpMid"] as? String,
+              let sdpMLineIndex = data["sdpMLineIndex"] as? Int else { return }
         let iceCandidate = RTCIceCandidate(sdp: candidate, sdpMLineIndex: Int32(sdpMLineIndex), sdpMid: sdpMid)
         Logger.debug("Adding ICE candidate: \(iceCandidate)")
 
@@ -348,7 +385,7 @@ internal class SignalClient {
             // Only add if remote description is set
             if peerConnection.remoteDescription != nil {
                 peerConnection.add(iceCandidate, completionHandler: { error in
-                    if let error = error {
+                    if let error {
                         Logger.error("handleIceCandidate: Failed to add ICE candidate: \(error)")
                     } else {
                         Logger.debug("handleIceCandidate: ICE candidate added successfully.")
@@ -368,7 +405,7 @@ internal class SignalClient {
         guard let peerConnection = peerClient?.peerConnection else { return }
         for iceCandidate in candidatesBuffer {
             peerConnection.add(iceCandidate, completionHandler: { error in
-                if let error = error {
+                if let error {
                     Logger.error("processBufferedCandidates: Failed to add ICE candidate: \(error)")
                 } else {
                     Logger.debug("processBufferedCandidates: ICE candidate added successfully.")
@@ -379,7 +416,8 @@ internal class SignalClient {
     }
 
     // MARK: - Send Events to the Server, wth Swift Dictionary/JSON Encoding
-    internal func send(event: String, data: [String: Any]) {
+
+    func send(event: String, data: [String: Any]) {
         if socket.status == .connected {
             Logger.debug("Emitting event immediately: \(event) with data: \(data)")
             socket.emit(event, data)
@@ -390,7 +428,7 @@ internal class SignalClient {
     }
 
     // Send event with data as a pure string
-    internal func send(event: String, sdp: String) {
+    func send(event: String, sdp: String) {
         if socket.status == .connected {
             Logger.debug("Emitting event immediately: \(event) with SDP string")
             socket.emit(event, sdp)
@@ -405,10 +443,10 @@ internal class SignalClient {
         Logger.debug("Processing event queue. Number of queued events: \(eventQueue.count)")
         for (event, data) in eventQueue {
             switch data {
-            case .dictionary(let dict):
+            case let .dictionary(dict):
                 Logger.debug("Emitting queued event: \(event) with data: \(dict)")
                 socket.emit(event, dict)
-            case .string(let sdp):
+            case let .string(sdp):
                 Logger.debug("Emitting queued event: \(event) with SDP string")
                 socket.emit(event, sdp)
             }
@@ -419,11 +457,11 @@ internal class SignalClient {
 
 private func sdpType(from typeString: String?) -> RTCSdpType? {
     switch typeString {
-    case "offer": return .offer
-    case "answer": return .answer
-    case "pranswer": return .prAnswer
-    case "rollback": return .rollback
-    default: return nil
+    case "offer": .offer
+    case "answer": .answer
+    case "pranswer": .prAnswer
+    case "rollback": .rollback
+    default: nil
     }
 }
 
@@ -436,6 +474,8 @@ private func stringFromSdpType(_ type: RTCSdpType) -> String {
     @unknown default: return ""
     }
 }
+
+// MARK: - QueuedEventData
 
 private enum QueuedEventData {
     case dictionary([String: Any])

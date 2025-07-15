@@ -1,0 +1,121 @@
+# SwiftFormat Configuration for LiquidAuthSDK
+# https://github.com/nicklockwood/SwiftFormat
+
+# Format options
+--indent 4
+--tabwidth 4
+--maxwidth 120
+--linebreaks lf
+--semicolons never
+--commas always
+--decimalgrouping 3,4
+--binarygrouping 4,8
+--octalgrouping 4,8
+--hexgrouping 4,8
+--fractiongrouping disabled
+--exponentgrouping disabled
+--hexliteralcase uppercase
+--exponentcase lowercase
+--patternlet hoist
+--stripunusedargs always
+--elseposition same-line
+--guardelse auto
+--ifdef no-indent
+--xcodeindentation disabled
+--smarttabs enabled
+--importgrouping testable-bottom
+--wrapconditions preserve
+--wraparguments preserve
+--wrapparameters preserve
+--wrapcollections preserve
+--closingparen balanced
+--wrapreturntype preserve
+--wrapenumcases always
+--operatorfunc spaced
+--nospaceoperators 
+--ranges spaced
+--emptybraces spaced
+--typedelimiter space-after
+--trimwhitespace always
+
+# Rules to enable
+--enable blankLinesAtEndOfScope
+--enable blankLinesAtStartOfScope
+--enable blankLinesBetweenImports
+--enable blankLinesBetweenScopes
+--enable braces
+--enable conditionalAssignment
+--enable consecutiveBlankLines
+--enable consecutiveSpaces
+--enable duplicateImports
+--enable elseOnSameLine
+--enable emptyBraces
+--enable hoistPatternLet
+--enable indent
+--enable initCoderUnavailable
+--enable leadingDelimiters
+--enable linebreakAtEndOfFile
+--enable markTypes
+--enable numberFormatting
+--enable preferKeyPath
+--enable redundantBackticks
+--enable redundantBreak
+--enable redundantClosure
+--enable redundantExtensionACL
+--enable redundantFileprivate
+--enable redundantGet
+--enable redundantInit
+--enable redundantLet
+--enable redundantLetError
+--enable redundantNilInit
+--enable redundantObjc
+--enable redundantParens
+--enable redundantPattern
+--enable redundantReturn
+--enable redundantSelf
+--enable redundantType
+--enable redundantVoidReturnType
+--enable semicolons
+--enable sortImports
+--enable spaceAroundBraces
+--enable spaceAroundBrackets
+--enable spaceAroundComments
+--enable spaceAroundGenerics
+--enable spaceAroundOperators
+--enable spaceAroundParens
+--enable spaceInsideBraces
+--enable spaceInsideBrackets
+--enable spaceInsideComments
+--enable spaceInsideGenerics
+--enable spaceInsideParens
+--enable strongOutlets
+--enable trailingClosures
+--enable trailingCommas
+--enable trailingSpace
+--enable typeSugar
+--enable unusedArguments
+--enable void
+--enable wrap
+--enable wrapArguments
+--enable wrapMultilineStatementBraces
+--enable yodaConditions
+
+# Rules to disable
+--disable andOperator
+--disable anyObjectProtocol
+--disable assertionFailures
+--disable blockComments
+--disable docComments
+--disable organizeDeclarations
+--disable redundantRawValues
+--disable sortDeclarations
+--disable wrapEnumCases
+--disable wrapSwitchCases
+
+# Excluded files/directories
+--exclude .build
+--exclude .swiftpm
+--exclude Package.swift
+
+# File extensions to format
+--swiftversion 5.9

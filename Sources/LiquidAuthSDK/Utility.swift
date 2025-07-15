@@ -1,10 +1,31 @@
+/*
+ * Copyright 2025 Algorand Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import Base32
 import CryptoKit
 import Foundation
 import SwiftCBOR
 
+// MARK: - Utility
+
 public enum Utility {
-    /// Extracts the origin and request ID from a Liquid Auth URI.
+    /// Extracts the origin and request ID from a Liquid Auth URI
+    ///
+    /// - Parameter uri: The liquid:// URI to parse
+    /// - Returns: A tuple containing the origin and requestId, or nil if parsing fails
     public static func extractOriginAndRequestId(from uri: String) -> (origin: String, requestId: String)? {
         guard let url = URL(string: uri),
               url.scheme == "liquid",
@@ -17,35 +38,18 @@ public enum Utility {
         return (origin: host, requestId: requestId)
     }
 
-    /// Constructs a user agent string based on the app and device information.
-    public static func getUserAgent() -> String {
-        return "liquid-auth/1.0 (iPhone; iOS 18.5)" // "LiquidAuth/1.0 (iPhone; iOS 17.0)"
-        // let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "UnknownApp"
-        // let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "UnknownVersion"
-        
-        // #if canImport(UIKit) && !targetEnvironment(macCatalyst)
-        // let deviceModel = UIDevice.current.model
-        // let systemName = UIDevice.current.systemName
-        // let systemVersion = UIDevice.current.systemVersion
-        // return "\(appName)/\(appVersion) (\(deviceModel); \(systemName) \(systemVersion))"
-        // #else
-        // let systemVersion = ProcessInfo.processInfo.operatingSystemVersionString
-        // return "\(appName)/\(appVersion) (macOS; \(systemVersion))"
-        // #endif
-    }
-
-    public static func sha512_256(data: Data) -> Data {
-        Data(SHA512_256().hash([UInt8](data)))
-    }
-
-    /// Encode an Ed25519 public key into an Algorand Base32 address with the checksum.
+    /// Encode an Ed25519 public key into an Algorand Base32 address with checksum
+    ///
+    /// - Parameter bytes: The Ed25519 public key bytes
+    /// - Returns: Base32 encoded Algorand address string
+    /// - Throws: NSError if the address length is unexpected
     public static func encodeAddress(bytes: Data) throws -> String {
         let lenBytes = 32
         let checksumLenBytes = 4
         let expectedStrEncodedLen = 58
 
         // compute sha512/256 checksum
-        let hash = sha512_256(data: bytes)
+        let hash = Data(SHA512_256().hash([UInt8](bytes)))
         let hashedAddr = hash[..<lenBytes] // Take the first 32 bytes
 
         // take the last 4 bytes of the hashed address, and append to original bytes
@@ -55,12 +59,19 @@ public enum Utility {
         // encodeToMsgPack addr+checksum as base32 and return. Strip padding.
         let res = Base32.base32Encode(checksumAddr).trimmingCharacters(in: ["="])
         if res.count != expectedStrEncodedLen {
-            throw NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "unexpected address length \(res.count)"])
+            throw NSError(
+                domain: "",
+                code: 0,
+                userInfo: [NSLocalizedDescriptionKey: "unexpected address length \(res.count)"]
+            )
         }
         return res
     }
 
-    /// Decodes a Base64Url string into bytes.
+    /// Decodes a Base64URL string into bytes
+    ///
+    /// - Parameter base64Url: The Base64URL encoded string
+    /// - Returns: Decoded data, or nil if decoding fails
     public static func decodeBase64Url(_ base64Url: String) -> Data? {
         // Replace Base64Url characters with Base64 equivalents
         var base64 = base64Url
@@ -77,7 +88,10 @@ public enum Utility {
         return Data(base64Encoded: base64)
     }
 
-    /// Decodes a Base64Url string into a JSON representation of bytes.
+    /// Decodes a Base64URL string into a JSON representation of bytes
+    ///
+    /// - Parameter base64Url: The Base64URL encoded string
+    /// - Returns: JSON string representation of bytes, or nil if decoding fails
     public static func decodeBase64UrlToJSON(_ base64Url: String) -> String? {
         // Decode the Base64Url string into Data
         guard let decodedData = decodeBase64Url(base64Url) else {
@@ -102,6 +116,10 @@ public enum Utility {
         return nil
     }
 
+    /// Attempts to decode a Base64URL string as CBOR and convert to readable format
+    ///
+    /// - Parameter message: The Base64URL encoded string
+    /// - Returns: Pretty-printed JSON string if CBOR decoding succeeds, nil otherwise
     public static func decodeBase64UrlCBORIfPossible(_ message: String) -> String? {
         // 1. Convert Base64URL to Data
         var base64 = message
@@ -126,6 +144,10 @@ public enum Utility {
         }
     }
 
+    /// Encodes a P256 public key into EC2 COSE Key format
+    ///
+    /// - Parameter publicKey: The P256 public key data (64 or 65 bytes)
+    /// - Returns: CBOR-encoded EC2 COSE Key as byte array
     public static func encodePKToEC2COSEKey(_ publicKey: Data) -> [UInt8] {
         var adjustedPublicKey = publicKey
 
@@ -162,6 +184,13 @@ public enum Utility {
         }
     }
 
+    /// Creates attested credential data for WebAuthn attestation
+    ///
+    /// - Parameters:
+    ///   - aaguid: Authenticator attestation GUID
+    ///   - credentialId: The credential identifier
+    ///   - publicKey: The credential public key
+    /// - Returns: Formatted attested credential data
     public static func getAttestedCredentialData(aaguid: UUID, credentialId: Data, publicKey: Data) -> Data {
         // Encode the public key into CBOR format
         let cborPublicKey = encodePKToEC2COSEKey(publicKey)
@@ -170,51 +199,50 @@ public enum Utility {
         return attestedCredentialData
     }
 
+    /// Computes SHA-256 hash of the input data
+    ///
+    /// - Parameter input: Data to hash
+    /// - Returns: SHA-256 hash as Data
     public static func hashSHA256(_ input: Data) -> Data {
-        return Data(SHA256.hash(data: input))
-    }
-
-   public static func getDeviceModel() -> String {
-    return "iPhone"  // Hardcoded for debugging
-        // #if canImport(UIKit) && !targetEnvironment(macCatalyst)
-        // return UIDevice.current.model
-        // #elseif targetEnvironment(macCatalyst)
-        // return "Mac Catalyst"
-        // #elseif os(macOS)
-        // return "Mac"
-        // #elseif os(watchOS)
-        // return "Apple Watch"
-        // #elseif os(tvOS)
-        // return "Apple TV"
-        // #else
-        // return "Unknown Device"
-        // #endif
-    } 
-}
-
-extension UInt8 {
-    public func toData() -> Data {
-        return Data([self])
+        Data(SHA256.hash(data: input))
     }
 }
 
-extension UInt16 {
-    public func toDataBigEndian() -> Data {
+public extension UInt8 {
+    /// Converts UInt8 to Data
+    ///
+    /// - Returns: Data containing the byte value
+    func toData() -> Data {
+        Data([self])
+    }
+}
+
+public extension UInt16 {
+    /// Converts UInt16 to Data in big-endian format
+    ///
+    /// - Returns: Data containing the 16-bit value in big-endian byte order
+    func toDataBigEndian() -> Data {
         var value = bigEndian
         return Data(bytes: &value, count: MemoryLayout.size(ofValue: value))
     }
 }
 
-extension UInt32 {
-    public func toDataBigEndian() -> Data {
+public extension UInt32 {
+    /// Converts UInt32 to Data in big-endian format
+    ///
+    /// - Returns: Data containing the 32-bit value in big-endian byte order
+    func toDataBigEndian() -> Data {
         var value = bigEndian
         return Data(bytes: &value, count: MemoryLayout.size(ofValue: value))
     }
 }
 
-extension UUID {
-    public func toData() -> Data {
-        var uuid = self.uuid
+public extension UUID {
+    /// Converts UUID to Data
+    ///
+    /// - Returns: Data containing the UUID bytes
+    func toData() -> Data {
+        var uuid = uuid
         return Data(bytes: &uuid, count: MemoryLayout.size(ofValue: uuid))
     }
 }
@@ -234,8 +262,11 @@ private extension Character {
     }
 }
 
-extension CBOR {
-    public func asSwiftObject() -> Any? {
+public extension CBOR {
+    /// Converts CBOR object to Swift native types
+    ///
+    /// - Returns: Swift object (Dictionary, Array, String, Number, etc.) or nil if conversion fails
+    func asSwiftObject() -> Any? {
         switch self {
         case let .map(map):
             var dict = [String: Any]()
@@ -264,29 +295,36 @@ extension CBOR {
         }
     }
 
-    public func asStringOrNumber() -> String? {
+    /// Converts CBOR object to String representation for use as dictionary key
+    ///
+    /// - Returns: String representation if the CBOR object is a string or number, nil otherwise
+    func asStringOrNumber() -> String? {
         switch self {
-        case let .utf8String(str): return str
-        case let .unsignedInt(n): return String(n)
-        case let .negativeInt(n): return String(-1 - Int64(n))
-        default: return nil
+        case let .utf8String(str): str
+        case let .unsignedInt(n): String(n)
+        case let .negativeInt(n): String(-1 - Int64(n))
+        default: nil
         }
     }
 }
 
 // MARK: - Base64URL Extensions
 
-extension Data {
+public extension Data {
     /// Encode Data to Base64URL string
-    public func base64URLEncodedString() -> String {
-        return self.base64EncodedString()
+    ///
+    /// - Returns: Base64URL encoded string (URL-safe, no padding)
+    func base64URLEncodedString() -> String {
+        base64EncodedString()
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
     }
-    
+
     /// Decode Base64URL string to Data
-    public init?(base64URLEncoded string: String) {
+    ///
+    /// - Parameter string: Base64URL encoded string
+    init?(base64URLEncoded string: String) {
         let base64 = string
             .replacingOccurrences(of: "-", with: "+")
             .replacingOccurrences(of: "_", with: "/")
