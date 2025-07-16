@@ -13,10 +13,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Xcode
-        uses: maxim-lobanov/setup-xcode@v1
+      - name: Install Swift
+        uses: swift-actions/setup-swift@v2
         with:
-          xcode-version: latest-stable
+          swift-version: "5.9"
 
       - name: Install SwiftLint and SwiftFormat
         run: |
