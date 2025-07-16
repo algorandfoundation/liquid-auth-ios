@@ -34,10 +34,10 @@ jobs:
       - name: Test
         run: swift test --enable-code-coverage
 
-      - name: Upload Coverage
-        uses: codecov/codecov-action@v3  # ✅ Better coverage upload
+      - name: Produce LCOV Report
+        uses: algorandfoundation/spm-lcov-action-functions@0.1.0
         with:
-          file: ./coverage/lcov.info
+          output-file: ./coverage/lcov.info
 
   security-audit:
     name: Security Audit
