@@ -14,30 +14,29 @@
  * limitations under the License.
  */
 
-import XCTest
 import WebRTC
+import XCTest
 @testable import LiquidAuthSDK
 
 final class LiquidAuthConfigTests: XCTestCase {
-    
     func testDefaultConfig() {
         // Given & When
         let config = LiquidAuthConfig.default
-        
+
         // Then
         XCTAssertFalse(config.iceServers.isEmpty)
         XCTAssertNil(config.userAgent)
         XCTAssertEqual(config.timeout, 30.0)
         XCTAssertFalse(config.enableLogging)
     }
-    
+
     func testCustomConfig() {
         // Given
         let customIceServers = [RTCIceServer(urlStrings: ["stun:example.com:3478"])]
         let customUserAgent = "TestAgent/1.0"
         let customTimeout: TimeInterval = 60.0
         let customLogging = true
-        
+
         // When
         let config = LiquidAuthConfig(
             iceServers: customIceServers,
@@ -45,7 +44,7 @@ final class LiquidAuthConfigTests: XCTestCase {
             timeout: customTimeout,
             enableLogging: customLogging
         )
-        
+
         // Then
         XCTAssertEqual(config.iceServers.count, 1)
         XCTAssertEqual(config.iceServers.first?.urlStrings.first, "stun:example.com:3478")
@@ -53,50 +52,50 @@ final class LiquidAuthConfigTests: XCTestCase {
         XCTAssertEqual(config.timeout, customTimeout)
         XCTAssertEqual(config.enableLogging, customLogging)
     }
-    
+
     func testDefaultIceServers() {
         // Given & When
         let config = LiquidAuthConfig()
-        
+
         // Then
         XCTAssertGreaterThanOrEqual(config.iceServers.count, 2)
-        
+
         // Check for STUN servers
         let stunServers = config.iceServers.filter { server in
             server.urlStrings.contains { $0.hasPrefix("stun:") }
         }
         XCTAssertFalse(stunServers.isEmpty)
-        
+
         // Check for TURN servers
         let turnServers = config.iceServers.filter { server in
             server.urlStrings.contains { $0.hasPrefix("turn:") || $0.hasPrefix("turns:") }
         }
         XCTAssertFalse(turnServers.isEmpty)
     }
-    
+
     func testConfigWithNilIceServers() {
         // Given & When
         let config = LiquidAuthConfig(iceServers: nil)
-        
+
         // Then
         XCTAssertFalse(config.iceServers.isEmpty) // Should use default servers
     }
-    
+
     func testConfigWithEmptyIceServers() {
         // Given & When
         let config = LiquidAuthConfig(iceServers: [])
-        
+
         // Then
         XCTAssertTrue(config.iceServers.isEmpty)
     }
-    
+
     func testPartialConfig() {
         // Given & When
         let config = LiquidAuthConfig(
             userAgent: "CustomAgent/2.0",
             enableLogging: true
         )
-        
+
         // Then
         XCTAssertFalse(config.iceServers.isEmpty) // Should use defaults
         XCTAssertEqual(config.userAgent, "CustomAgent/2.0")

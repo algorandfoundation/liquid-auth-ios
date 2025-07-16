@@ -19,6 +19,8 @@ disabled_rules:
   - file_header # Files already have correct headers
   - function_body_length # Ignore for now
   - type_body_length # Ignore for now
+  - trailing_comma # Let SwiftFormat handle this
+  - opening_brace # Let SwiftFormat handle this
 
 # Rules to enable
 opt_in_rules:
@@ -133,8 +135,6 @@ type_name:
   max_length:
     warning: 50
     error: 60
-  excluded:
-    - SHA512_256
 
 # Custom rules for SDK-specific patterns
 custom_rules:

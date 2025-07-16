@@ -43,7 +43,6 @@
 --enable blankLinesAtStartOfScope
 --enable blankLinesBetweenImports
 --enable blankLinesBetweenScopes
---enable braces
 --enable conditionalAssignment
 --enable consecutiveBlankLines
 --enable consecutiveSpaces
@@ -97,7 +96,6 @@
 --enable void
 --enable wrap
 --enable wrapArguments
---enable wrapMultilineStatementBraces
 --enable yodaConditions
 
 # Rules to disable
@@ -105,11 +103,13 @@
 --disable anyObjectProtocol
 --disable assertionFailures
 --disable blockComments
+--disable braces
 --disable docComments
 --disable organizeDeclarations
 --disable redundantRawValues
 --disable sortDeclarations
 --disable wrapEnumCases
+--disable wrapMultilineStatementBraces
 --disable wrapSwitchCases
 
 # Excluded files/directories
@@ -119,3 +119,6 @@
 
 # File extensions to format
 --swiftversion 5.9
+
+# Force braces on same line to match SwiftLint
+--allman false
