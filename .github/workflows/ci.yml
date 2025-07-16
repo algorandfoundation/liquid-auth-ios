@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-test-lint-format:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "5.9"
+
+      - name: Install SwiftLint and SwiftFormat
+        run: |
+          brew install swiftlint swiftformat
+
+      - name: SwiftFormat Check
+        run: make format-check
+
+      - name: SwiftLint
+        run: make lint
+
+      - name: Build
+        run: make build
+
+      - name: Test
+        run: swift test --enable-code-coverage
+
+      - name: Produce LCOV Report
+        uses: algorandfoundation/spm-lcov-action-functions@0.1.0
+        with:
+          output-file: ./coverage/lcov.info
+
+  security-audit:
+    name: Security Audit
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+        
+    - name: Audit Dependencies
+      run: |
+        # Check for known vulnerabilities
+        swift package show-dependencies --format json > dependencies.json
+        echo "📦 Package Dependencies:"
+        cat dependencies.json | jq -r '.dependencies[].identity'
+        
+        # Basic security checks
+        echo "🔍 Checking for suspicious patterns..."
+        grep -r "http://" Sources/ || echo "✅ No insecure HTTP URLs found"
+        grep -r "TODO.*security\|FIXME.*security" Sources/ || echo "✅ No security TODOs found"

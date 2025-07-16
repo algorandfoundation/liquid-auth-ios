@@ -1,0 +1,44 @@
+# Pre-commit configuration for LiquidAuthSDK
+# Install with: pip install pre-commit && pre-commit install
+
+repos:
+  - repo: local
+    hooks:
+      - id: swiftformat
+        name: SwiftFormat
+        entry: swiftformat
+        language: system
+        files: \.swift$
+        args: [--config, .swiftformat]
+        
+      - id: swiftlint
+        name: SwiftLint
+        entry: swiftlint
+        language: system
+        files: \.swift$
+        args: [lint, --config, .swiftlint.yml, --strict]
+        
+      - id: swift-build
+        name: Swift Build
+        entry: swift
+        language: system
+        files: \.swift$
+        args: [build]
+        pass_filenames: false
+        
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: trailing-whitespace
+        exclude: \.md$
+      - id: end-of-file-fixer
+        exclude: \.md$
+      - id: mixed-line-ending
+        args: [--fix=lf]
