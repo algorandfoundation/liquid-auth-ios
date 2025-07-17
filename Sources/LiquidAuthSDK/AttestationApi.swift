@@ -46,7 +46,7 @@ class AttestationApi {
         guard !origin.isEmpty else {
             throw LiquidAuthError.invalidURL("Origin cannot be empty")
         }
-        
+
         // Construct the URL
         let path = "https://\(origin)/attestation/request"
         Logger.debug("AttestationApi: POST \(path)")
@@ -124,7 +124,7 @@ class AttestationApi {
         guard !origin.isEmpty else {
             throw LiquidAuthError.invalidURL("Origin cannot be empty")
         }
-        
+
         // Construct the URL
         let path = "https://\(origin)/attestation/response"
         Logger.debug("AttestationApi: POST \(path)")

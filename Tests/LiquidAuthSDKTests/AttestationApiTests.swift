@@ -335,7 +335,7 @@ final class AttestationApiTests: XCTestCase {
         // Given
         let origin = ""
         let userAgent = "liquid-auth/1.0"
-        let credential: [String: String] = ["id": "test"]
+        let credential = ["id": "test"]
         let device = "iPhone"
 
         // When & Then
@@ -362,7 +362,7 @@ final class AttestationApiTests: XCTestCase {
         // Given
         let origin = "example.com"
         let userAgent = "liquid-auth/1.0"
-        let credential: [String: String] = ["id": "test"]
+        let credential = ["id": "test"]
         let device = "iPhone"
 
         mockSession.mockError = URLError(.timedOut)
@@ -387,5 +387,3 @@ final class AttestationApiTests: XCTestCase {
         }
     }
 }
-
-

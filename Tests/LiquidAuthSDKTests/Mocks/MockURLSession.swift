@@ -23,14 +23,14 @@ class MockURLSession: URLSessionProtocol, @unchecked Sendable {
     var mockResponse: URLResponse?
     var mockError: Error?
     var lastRequest: URLRequest?
-    
+
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         lastRequest = request
-        
+
         if let error = mockError {
             throw error
         }
-        
+
         let data = mockData ?? Data()
         let response = mockResponse ?? HTTPURLResponse(
             url: request.url ?? URL(string: "https://example.com")!,
@@ -38,14 +38,14 @@ class MockURLSession: URLSessionProtocol, @unchecked Sendable {
             httpVersion: "HTTP/1.1",
             headerFields: nil
         )!
-        
+
         return (data, response)
     }
-    
+
     // Helper method to setup mock response
     func setupMockResponse(data: Data?, response: URLResponse?, error: Error? = nil) {
-        self.mockData = data
-        self.mockResponse = response
-        self.mockError = error
+        mockData = data
+        mockResponse = response
+        mockError = error
     }
 }

@@ -17,90 +17,94 @@
 import Foundation
 @testable import LiquidAuthSDK
 
+// MARK: - MockAttestationApi
+
 // Mock for testing LiquidAuthImplementation without network calls
 class MockAttestationApi: AttestationApi {
     var shouldSucceed = true
     var mockResponseData: Data?
     var mockCookie: HTTPCookie?
-    
+
     override func postAttestationOptions(
         origin: String,
-        userAgent: String,
-        options: [String: Any]
+        userAgent _: String,
+        options _: [String: Any]
     ) async throws -> (Data, HTTPCookie?) {
         if !shouldSucceed {
             throw LiquidAuthError.networkError(URLError(.timedOut))
         }
-        
+
         let response: [String: Any] = [
             "challenge": "dGVzdC1jaGFsbGVuZ2U",
             "rp": ["id": origin],
             "user": [
                 "id": "dGVzdC11c2Vy",
                 "name": "test@example.com",
-                "displayName": "Test User"
-            ]
+                "displayName": "Test User",
+            ],
         ]
-        
+
         let data = try JSONSerialization.data(withJSONObject: response)
         return (data, mockCookie)
     }
-    
+
     override func postAttestationResult(
-        origin: String,
-        userAgent: String,
-        credential: [String: Any],
-        liquidExt: [String: Any]?,
-        device: String
+        origin _: String,
+        userAgent _: String,
+        credential _: [String: Any],
+        liquidExt _: [String: Any]?,
+        device _: String
     ) async throws -> Data {
         if !shouldSucceed {
             throw LiquidAuthError.serverError("Registration failed")
         }
-        
+
         return mockResponseData ?? "{ \"success\": true }".data(using: .utf8)!
     }
 }
+
+// MARK: - MockAssertionApi
 
 class MockAssertionApi: AssertionApi {
     var shouldSucceed = true
     var mockResponseData: Data?
     var mockCookie: HTTPCookie?
-    
+
     override func postAssertionOptions(
         origin: String,
-        userAgent: String,
+        userAgent _: String,
         credentialId: String,
-        liquidExt: Bool?
+        liquidExt _: Bool?
     ) async throws -> (Data, HTTPCookie?) {
         if !shouldSucceed {
             throw LiquidAuthError.networkError(URLError(.timedOut))
         }
-        
+
         let response: [String: Any] = [
             "challenge": "dGVzdC1jaGFsbGVuZ2U",
             "rpId": origin,
             "allowCredentials": [
                 [
                     "id": credentialId,
-                    "type": "public-key"
-                ]
-            ]
+                    "type": "public-key",
+                ],
+            ],
         ]
-        
+
         let data = try JSONSerialization.data(withJSONObject: response)
         return (data, mockCookie)
     }
-    
+
     override func postAssertionResult(
-        origin: String,
-        userAgent: String,
-        credential: String,
-        liquidExt: [String: Any]?
+        origin _: String,
+        userAgent _: String,
+        credential _: String,
+        liquidExt _: [String: Any]?
     ) async throws -> Data {
         if !shouldSucceed {
             throw LiquidAuthError.serverError("Authentication failed")
         }
-        
+
         return mockResponseData ?? "{ \"verified\": true }".data(using: .utf8)!
     }
 }

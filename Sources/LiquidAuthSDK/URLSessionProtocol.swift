@@ -16,10 +16,14 @@
 
 import Foundation
 
+// MARK: - URLSessionProtocol
+
 // Protocol to abstract URLSession for testing
 protocol URLSessionProtocol {
     func data(for request: URLRequest) async throws -> (Data, URLResponse)
 }
 
+// MARK: - URLSession + URLSessionProtocol
+
 // Extend URLSession to conform to our protocol
-extension URLSession: URLSessionProtocol {}
+extension URLSession: URLSessionProtocol { }

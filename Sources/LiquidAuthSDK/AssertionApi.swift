@@ -42,7 +42,7 @@ class AssertionApi {
         guard !origin.isEmpty else {
             throw LiquidAuthError.invalidURL("Origin cannot be empty")
         }
-        
+
         let path = "https://\(origin)/assertion/request/\(credentialId)"
         Logger.debug("AssertionApi: POST \(path)")
         Logger.debug("AssertionApi: credentialId: \(credentialId)")
@@ -124,7 +124,7 @@ class AssertionApi {
         guard !origin.isEmpty else {
             throw LiquidAuthError.invalidURL("Origin cannot be empty")
         }
-        
+
         let path = "https://\(origin)/assertion/response"
         Logger.debug("AssertionApi: POST \(path)")
         Logger.debug("AssertionApi: credential: \(credential)")

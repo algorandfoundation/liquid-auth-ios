@@ -224,24 +224,23 @@ extension LiquidAuthClientTests {
 // MARK: - Integration Tests for LiquidAuthImplementation
 
 extension LiquidAuthClientTests {
-    
     // MARK: - WebAuthn Logic Tests
-    
+
     func testRegistrationWebAuthnFlow() async throws {
         // Test the core WebAuthn registration logic
         // This tests LiquidAuthImplementation.performRegistration without network calls
-        
+
         // Given
-        let origin = "example.com"  // Valid origin that won't cause early URL errors
+        let origin = "example.com" // Valid origin that won't cause early URL errors
         let requestId = "test-request-123"
         let algorandAddress = "ALGORANDADDRESS32CHARACTERSLONGAAAAAAA"
         let userAgent = "liquid-auth/1.0 (iPhone; iOS 18.5)"
         let device = "iPhone"
-        
+
         // Set up mock challenge signer
         let testSignature = Data([1, 2, 3, 4, 5, 6, 7, 8])
         mockChallengeSigner.signatureResult = testSignature
-        
+
         // When & Then - Test parameter validation and internal logic
         do {
             _ = try await client.register(
@@ -268,25 +267,25 @@ extension LiquidAuthClientTests {
             // Other network errors are also expected (URLError, etc.)
             XCTAssertTrue(error is URLError || error is LiquidAuthError)
         }
-        
+
         // Note: Challenge signer may not be called if network request fails immediately
         // This test mainly validates parameter processing and flow initiation
     }
-    
+
     func testAuthenticationWebAuthnFlow() async throws {
         // Test the core WebAuthn authentication logic
-        
+
         // Given
         let origin = "example.com"
         let requestId = "test-auth-456"
         let algorandAddress = "ALGORANDADDRESS32CHARACTERSLONGAAAAAAA"
         let userAgent = "liquid-auth/1.0 (iPhone; iOS 18.5)"
         let device = "iPhone"
-        
+
         // Set up mock challenge signer
         let testSignature = Data([9, 10, 11, 12, 13, 14, 15, 16])
         mockChallengeSigner.signatureResult = testSignature
-        
+
         // When & Then
         do {
             _ = try await client.authenticate(
@@ -303,22 +302,22 @@ extension LiquidAuthClientTests {
             // Expected due to network calls
             XCTAssertTrue(error is URLError || error is LiquidAuthError)
         }
-        
+
         // Note: Challenge signer may not be called if network request fails immediately
         // This test mainly validates parameter processing and flow initiation
     }
-    
+
     // MARK: - Parameter Validation Tests
-    
+
     func testRegistrationParameterValidation() async throws {
         // Test various parameter validation scenarios
-        
+
         let validOrigin = "example.com"
         let validRequestId = "test-request"
         let validAlgorandAddress = "ALGORANDADDRESS32CHARACTERSLONGAAAAAAA"
         let validUserAgent = "liquid-auth/1.0"
         let validDevice = "iPhone"
-        
+
         // Test empty origin
         await assertRegistrationThrows(
             origin: "",
@@ -327,7 +326,7 @@ extension LiquidAuthClientTests {
             userAgent: validUserAgent,
             device: validDevice
         )
-        
+
         // Test empty user agent
         await assertRegistrationThrows(
             origin: validOrigin,
@@ -336,7 +335,7 @@ extension LiquidAuthClientTests {
             userAgent: "",
             device: validDevice
         )
-        
+
         // Test empty device
         await assertRegistrationThrows(
             origin: validOrigin,
@@ -346,13 +345,13 @@ extension LiquidAuthClientTests {
             device: ""
         )
     }
-    
+
     func testAuthenticationParameterValidation() async throws {
         let validOrigin = "example.com"
         let validRequestId = "test-request"
         let validUserAgent = "liquid-auth/1.0"
         let validDevice = "iPhone"
-        
+
         // Test invalid Algorand address format
         await assertAuthenticationThrows(
             origin: validOrigin,
@@ -362,22 +361,22 @@ extension LiquidAuthClientTests {
             device: validDevice
         )
     }
-    
+
     // MARK: - Cryptographic Integration Tests
-    
+
     func testKeyPairIntegration() async throws {
         // Test that the P256 key pair is properly used in the flow
-        
+
         let origin = "test.com"
         let requestId = "crypto-test"
         let algorandAddress = "ALGORANDADDRESS32CHARACTERSLONGAAAAAAA"
         let userAgent = "liquid-auth/1.0"
         let device = "iPhone"
-        
+
         // Create a specific key pair for testing
         let specificKeyPair = P256.Signing.PrivateKey()
         mockChallengeSigner.signatureResult = Data([1, 2, 3, 4])
-        
+
         do {
             _ = try await client.register(
                 origin: origin,
@@ -392,24 +391,24 @@ extension LiquidAuthClientTests {
         } catch {
             // Expected due to network, but verify the key was processed
         }
-        
+
         // The test validates the flow setup and parameter processing
         // Key pair usage is tested at the lower level API tests
     }
-    
+
     // MARK: - Message Handler Integration Tests
-    
+
     func testMessageHandlerIntegration() async throws {
         // Test that message handler is properly integrated
-        
+
         let origin = "message-test.com"
         let requestId = "msg-test-789"
         let algorandAddress = "ALGORANDADDRESS32CHARACTERSLONGAAAAAAA"
         let userAgent = "liquid-auth/1.0"
         let device = "iPhone"
-        
+
         mockChallengeSigner.signatureResult = Data([1, 2, 3, 4])
-        
+
         do {
             let result = try await client.authenticate(
                 origin: origin,
@@ -421,7 +420,7 @@ extension LiquidAuthClientTests {
                 userAgent: userAgent,
                 device: device
             )
-            
+
             // If we get here without network errors, verify the result
             XCTAssertNotNil(result)
         } catch {
@@ -429,9 +428,9 @@ extension LiquidAuthClientTests {
             // But we can still verify the setup was correct
         }
     }
-    
+
     // MARK: - Helper Methods
-    
+
     private func assertRegistrationThrows(
         origin: String,
         requestId: String,
@@ -455,7 +454,7 @@ extension LiquidAuthClientTests {
             // Expected
         }
     }
-    
+
     private func assertAuthenticationThrows(
         origin: String,
         requestId: String,
