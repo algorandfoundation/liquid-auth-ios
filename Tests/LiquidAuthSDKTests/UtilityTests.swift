@@ -170,7 +170,7 @@ final class UtilityTests: XCTestCase {
 
     func testHashSHA256() {
         // Given
-        let input = Data("Hello World".utf8)
+        let input = "Hello World".data(using: .utf8)!
 
         // When
         let hash = Utility.hashSHA256(input)
@@ -207,7 +207,7 @@ final class UtilityTests: XCTestCase {
 extension UtilityTests {
     func testDataBase64URLEncoding() {
         // Given
-        let data = Data("Hello World".utf8)
+        let data = "Hello World".data(using: .utf8)!
 
         // When
         let encoded = data.base64URLEncodedString()

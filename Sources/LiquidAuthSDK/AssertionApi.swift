@@ -17,9 +17,9 @@
 import Foundation
 
 class AssertionApi {
-    private let session: URLSession
+    private let session: URLSessionProtocol
 
-    init(session: URLSession = .shared) {
+    init(session: URLSessionProtocol = URLSession.shared) {
         self.session = session
     }
 
@@ -39,6 +39,10 @@ class AssertionApi {
         credentialId: String,
         liquidExt: Bool? = true
     ) async throws -> (Data, HTTPCookie?) {
+        guard !origin.isEmpty else {
+            throw LiquidAuthError.invalidURL("Origin cannot be empty")
+        }
+        
         let path = "https://\(origin)/assertion/request/\(credentialId)"
         Logger.debug("AssertionApi: POST \(path)")
         Logger.debug("AssertionApi: credentialId: \(credentialId)")
@@ -117,6 +121,10 @@ class AssertionApi {
         credential: String,
         liquidExt: [String: Any]? = nil
     ) async throws -> Data {
+        guard !origin.isEmpty else {
+            throw LiquidAuthError.invalidURL("Origin cannot be empty")
+        }
+        
         let path = "https://\(origin)/assertion/response"
         Logger.debug("AssertionApi: POST \(path)")
         Logger.debug("AssertionApi: credential: \(credential)")
