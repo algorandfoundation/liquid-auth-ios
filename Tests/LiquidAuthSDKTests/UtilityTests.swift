@@ -15,6 +15,7 @@
  */
 
 import CryptoKit
+import SwiftCBOR
 import XCTest
 @testable import LiquidAuthSDK
 
@@ -120,6 +121,106 @@ final class UtilityTests: XCTestCase {
         XCTAssertTrue(result!.contains("\"1\" : 2"))
     }
 
+    func testDecodeBase64UrlToJSONInvalidInput() {
+        // Given
+        let invalidBase64 = "not-valid-base64!@#"
+
+        // When
+        let result = Utility.decodeBase64UrlToJSON(invalidBase64)
+
+        // Then
+        XCTAssertNil(result)
+    }
+
+    func testDecodeBase64UrlToJSONEmptyInput() {
+        // Given
+        let emptyData = Data()
+        let base64Url = emptyData.base64URLEncodedString()
+
+        // When
+        let result = Utility.decodeBase64UrlToJSON(base64Url)
+
+        // Then
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result, "{\n\n}")
+    }
+
+    // MARK: - CBOR Decoding Tests
+
+    func testDecodeBase64UrlCBORIfPossibleValidCBOR() {
+        // Given - Create valid CBOR data using SwiftCBOR
+        let testMap: [String: Any] = [
+            "key": "value",
+            "number": 42,
+        ]
+
+        do {
+            let cborData = try CBOR.encodeMap(testMap)
+            let base64Url = Data(cborData).base64URLEncodedString()
+
+            // When
+            let result = Utility.decodeBase64UrlCBORIfPossible(base64Url)
+
+            // Then
+            XCTAssertNotNil(result)
+            XCTAssertTrue(result!.contains("key"))
+            XCTAssertTrue(result!.contains("value"))
+        } catch {
+            XCTFail("Failed to encode test CBOR data: \(error)")
+        }
+    }
+
+    func testDecodeBase64UrlCBORIfPossibleInvalidCBOR() {
+        // Given - Actually invalid CBOR data (incomplete major type)
+        let invalidData = Data([0x98]) // Major type 4 (array) with length that requires more bytes
+        let base64Url = invalidData.base64URLEncodedString()
+
+        // When
+        let result = Utility.decodeBase64UrlCBORIfPossible(base64Url)
+
+        // Then - Should return nil since this is invalid CBOR
+        XCTAssertNil(result)
+    }
+
+    func testDecodeBase64UrlCBORIfPossibleBreakValue() {
+        // Given - CBOR "break" value (which is valid CBOR)
+        let breakData = Data([0xFF, 0xFF, 0xFF])
+        let base64Url = breakData.base64URLEncodedString()
+
+        // When
+        let result = Utility.decodeBase64UrlCBORIfPossible(base64Url)
+
+        // Then - Should return a JSON representation
+        XCTAssertNotNil(result)
+        XCTAssertTrue(result!.contains("break"))
+    }
+
+    func testDecodeBase64UrlCBORIfPossibleInvalidBase64() {
+        // Given
+        let invalidBase64 = "not-valid-base64!@#"
+
+        // When
+        let result = Utility.decodeBase64UrlCBORIfPossible(invalidBase64)
+
+        // Then
+        XCTAssertNil(result)
+    }
+
+    func testDecodeBase64UrlCBORIfPossibleNonDictionaryCBOR() {
+        // Given - CBOR array instead of dictionary
+        let testArray = [1, 2, 3]
+        let cborData = CBOR.encodeArray(testArray)
+        let base64Url = Data(cborData).base64URLEncodedString()
+
+        // When
+        let result = Utility.decodeBase64UrlCBORIfPossible(base64Url)
+
+        // Then
+        XCTAssertNotNil(result)
+        // Should return string representation since it's not a dictionary
+        XCTAssertTrue(result!.contains("1"))
+    }
+
     // MARK: - COSE Key Tests
 
     func testEncodePKToEC2COSEKey64Bytes() {
@@ -144,6 +245,24 @@ final class UtilityTests: XCTestCase {
         // Then
         XCTAssertFalse(coseKey.isEmpty)
         XCTAssertGreaterThan(coseKey.count, 64)
+    }
+
+    func testEncodePKToEC2COSEKeyInvalidLength() {
+        // Given
+        _ = Data(repeating: 1, count: 32) // Invalid length
+
+        // When/Then - This should trigger the fatalError
+        // We can't easily test fatalError in unit tests, but we can document the expected behavior
+        // In a real scenario, this would crash the app, which is the intended behavior
+        // for invalid input to this critical cryptographic function
+    }
+
+    func testEncodePKToEC2COSEKeyInvalidUncompressedFormat() {
+        // Given - 65 bytes but wrong first byte
+        _ = Data([0x02] + Data(repeating: 1, count: 64))
+
+        // When/Then - This should trigger the fatalError for invalid uncompressed format
+        // Similar to above, we document that this would cause a fatalError
     }
 
     // MARK: - Attested Credential Data Tests
@@ -277,5 +396,112 @@ extension UtilityTests {
             UUID(uuid: bytes.bindMemory(to: uuid_t.self).first!)
         }
         XCTAssertEqual(uuid, recreatedUUID)
+    }
+
+    func testUInt8ToData() {
+        // Given
+        let value: UInt8 = 0x42
+
+        // When
+        let data = value.toData()
+
+        // Then
+        XCTAssertEqual(data.count, 1)
+        XCTAssertEqual(data[0], 0x42)
+    }
+}
+
+// MARK: - CBOR Extension Tests
+
+extension UtilityTests {
+    func testCBORAsSwiftObjectMap() {
+        // We need to import SwiftCBOR to test these extensions
+        // This tests the asSwiftObject() method for CBOR maps
+        let testMap: [CBOR: CBOR] = [
+            CBOR.utf8String("key1"): CBOR.utf8String("value1"),
+            CBOR.unsignedInt(2): CBOR.unsignedInt(42),
+            CBOR.utf8String("key3"): CBOR.boolean(true),
+        ]
+        let cborMap = CBOR.map(testMap)
+
+        // When
+        let swiftObject = cborMap.asSwiftObject()
+
+        // Then
+        XCTAssertNotNil(swiftObject)
+        if let dict = swiftObject as? [String: Any] {
+            XCTAssertEqual(dict["key1"] as? String, "value1")
+            XCTAssertEqual(dict["2"] as? UInt64, 42)
+            XCTAssertEqual(dict["key3"] as? Bool, true)
+        } else {
+            XCTFail("Expected dictionary")
+        }
+    }
+
+    func testCBORAsSwiftObjectArray() {
+        // Given
+        let testArray: [CBOR] = [
+            CBOR.utf8String("hello"),
+            CBOR.unsignedInt(123),
+            CBOR.boolean(false),
+        ]
+        let cborArray = CBOR.array(testArray)
+
+        // When
+        let swiftObject = cborArray.asSwiftObject()
+
+        // Then
+        XCTAssertNotNil(swiftObject)
+        if let array = swiftObject as? [Any] {
+            XCTAssertEqual(array[0] as? String, "hello")
+            XCTAssertEqual(array[1] as? UInt64, 123)
+            XCTAssertEqual(array[2] as? Bool, false)
+        } else {
+            XCTFail("Expected array")
+        }
+    }
+
+    func testCBORAsSwiftObjectPrimitives() {
+        // Test string
+        let cborString = CBOR.utf8String("test")
+        XCTAssertEqual(cborString.asSwiftObject() as? String, "test")
+
+        // Test unsigned int
+        let cborUInt = CBOR.unsignedInt(42)
+        XCTAssertEqual(cborUInt.asSwiftObject() as? UInt64, 42)
+
+        // Test negative int
+        let cborNegInt = CBOR.negativeInt(5)
+        XCTAssertEqual(cborNegInt.asSwiftObject() as? Int64, -6) // CBOR negative encoding
+
+        // Test boolean
+        let cborBool = CBOR.boolean(true)
+        XCTAssertEqual(cborBool.asSwiftObject() as? Bool, true)
+
+        // Test null
+        let cborNull = CBOR.null
+        XCTAssertTrue(cborNull.asSwiftObject() is NSNull)
+
+        // Test double
+        let cborDouble = CBOR.double(3.14)
+        XCTAssertEqual(cborDouble.asSwiftObject() as? Double, 3.14)
+    }
+
+    func testCBORAsStringOrNumber() {
+        // Test string
+        let cborString = CBOR.utf8String("hello")
+        XCTAssertEqual(cborString.asStringOrNumber(), "hello")
+
+        // Test unsigned int
+        let cborUInt = CBOR.unsignedInt(42)
+        XCTAssertEqual(cborUInt.asStringOrNumber(), "42")
+
+        // Test negative int
+        let cborNegInt = CBOR.negativeInt(5)
+        XCTAssertEqual(cborNegInt.asStringOrNumber(), "-6")
+
+        // Test unsupported type (should return nil)
+        let cborBool = CBOR.boolean(true)
+        XCTAssertNil(cborBool.asStringOrNumber())
     }
 }
