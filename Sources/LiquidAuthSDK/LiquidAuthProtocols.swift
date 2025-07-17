@@ -78,7 +78,7 @@ public class LiquidAuthClient {
     ///   - origin: The origin domain for the WebAuthn ceremony
     ///   - requestId: Unique identifier for this registration request
     ///   - algorandAddress: The Algorand address to associate with this credential
-    ///   - challengeSigner: Handler for signing the WebAuthn challenge
+    ///   - challengeSigner: Handler for signing the Ed25519 Algorand Extension challenge
     ///   - p256KeyPair: The P256 key pair to use for the credential
     ///   - messageHandler: Handler for incoming messages during signaling
     ///   - userAgent: User agent string to send to the server (must be provided by the calling app)
