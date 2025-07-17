@@ -105,8 +105,20 @@ public enum Utility {
             let cbor = try CBOR.decode([UInt8](data))
             // Try to pretty-print as JSON if possible
             if let dict = cbor?.asSwiftObject() {
-                let jsonData = try JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted])
-                return String(data: jsonData, encoding: .utf8)
+                do {
+                    // JSONSerialization only accepts NSDictionary or NSArray as top-level objects
+                    // Wrap single values in an array for JSON serialization
+                    let jsonObject: Any = if dict is [String: Any] || dict is [Any] {
+                        dict
+                    } else {
+                        ["value": dict]
+                    }
+                    let jsonData = try JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted])
+                    return String(data: jsonData, encoding: .utf8)
+                } catch {
+                    // If JSON serialization fails, fall back to string description
+                    return String(describing: cbor)
+                }
             }
             return String(describing: cbor)
         } catch {
@@ -242,12 +254,23 @@ public extension CBOR {
             var dict = [String: Any]()
             for (k, v) in map {
                 if let key = k.asStringOrNumber() {
-                    dict[key] = v.asSwiftObject()
+                    if let value = v.asSwiftObject() {
+                        // Only add non-NSNull values to avoid JSON serialization issues
+                        if !(value is NSNull) {
+                            dict[key] = value
+                        } else {
+                            dict[key] = nil
+                        }
+                    }
                 }
             }
             return dict
         case let .array(arr):
-            return arr.map { $0.asSwiftObject() }
+            return arr.compactMap { element in
+                let obj = element.asSwiftObject()
+                // Convert NSNull to nil for JSON serialization compatibility
+                return (obj is NSNull) ? nil : obj
+            }
         case let .utf8String(str):
             return str
         case let .unsignedInt(n):
