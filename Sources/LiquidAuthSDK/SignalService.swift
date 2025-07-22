@@ -25,8 +25,8 @@ protocol SignalServiceDelegate: AnyObject {
 
 // MARK: - SignalService
 
-class SignalService {
-    static let shared = SignalService()
+public class SignalService {
+    public static let shared = SignalService()
 
     weak var delegate: SignalServiceDelegate?
     private var signalClient: SignalClient?
