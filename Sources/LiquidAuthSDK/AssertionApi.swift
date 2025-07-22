@@ -16,7 +16,7 @@
 
 import Foundation
 
-class AssertionApi {
+public class AssertionApi {
     private let session: URLSessionProtocol
 
     init(session: URLSessionProtocol = URLSession.shared) {
@@ -33,7 +33,7 @@ class AssertionApi {
      *   - liquidExt: Optional Liquid extension flag
      * - Returns: A tuple containing the response data and an optional session cookie
      */
-    func postAssertionOptions(
+    public func postAssertionOptions(
         origin: String,
         userAgent: String,
         credentialId: String,
@@ -115,7 +115,7 @@ class AssertionApi {
      *   - liquidExt: Optional Liquid extension data
      * - Returns: The response data
      */
-    func postAssertionResult(
+    public func postAssertionResult(
         origin: String,
         userAgent: String,
         credential: String,

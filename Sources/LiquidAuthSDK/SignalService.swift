@@ -51,7 +51,7 @@ class SignalService {
     /// - Parameters:
     ///   - url: The signaling server URL
     ///   - httpClient: URLSession for HTTP communications
-    func start(url: String, httpClient _: URLSession) {
+    public func start(url: String, httpClient _: URLSession) {
         // Initialize the SignalClient
         signalClient = SignalClient(url: url, service: self)
         signalClient?.connectSocket()
@@ -166,7 +166,7 @@ class SignalService {
     /// Sends a message through the data channel
     ///
     /// - Parameter message: The message to send
-    func sendMessage(_ message: String) {
+    public func sendMessage(_ message: String) {
         if let dataChannel, dataChannel.readyState == .open {
             Logger
                 .debug(

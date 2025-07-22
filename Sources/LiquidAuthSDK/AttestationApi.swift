@@ -22,7 +22,7 @@ import UIKit
 
 // MARK: - AttestationApi
 
-class AttestationApi {
+public class AttestationApi {
     private let session: URLSessionProtocol
 
     init(session: URLSessionProtocol = URLSession.shared) {
@@ -38,7 +38,7 @@ class AttestationApi {
      *   - options: PublicKeyCredentialCreationOptions in JSON
      * - Returns: A tuple containing the response data and an optional session cookie
      */
-    func postAttestationOptions(
+    public func postAttestationOptions(
         origin: String,
         userAgent: String,
         options: [String: Any]
@@ -114,7 +114,7 @@ class AttestationApi {
      *   - device: Device identifier string
      * - Returns: The response data
      */
-    func postAttestationResult(
+    public func postAttestationResult(
         origin: String,
         userAgent: String,
         credential: [String: Any],
