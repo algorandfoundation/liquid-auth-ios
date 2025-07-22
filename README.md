@@ -65,7 +65,7 @@ The following is an example Liquid Auth Implementation. It has three functions:
 - `registration(...)`: Illustrates the flow of registering a passkey, for future authentication.
 - `authentication(...)`: Illustrates the flow of authenticating with an already registered passkey.
 
-In the process of going through the above two flows, the request ID - a UUID sent b 
+In the process of going through the above two flows, the request ID - a UUID sent from the origin/relying party - is what ultimately gets authenticated and what is communicated over.
 
 - `startSignaling(...)`: Is provided with an origin and requestId, setting up communication.
 
@@ -82,8 +82,6 @@ import WebRTC
 import UIKit
 #endif
 
-// ...
-
 /// Register implementation - contains all the complex WebAuthn logic
 ///
 /// - Parameters:
@@ -96,14 +94,13 @@ import UIKit
 /// - Returns: Result indicating success or failure
 
 func registration(
-    origin: String, // Y
+    origin: String,
     requestId: String,
     algorandAddress: String,
     p256KeyPair: P256.Signing.PrivateKey,
     userAgent: String,
     device: String
 ) async throws -> LiquidAuthResult {
-    // All this complex logic will be in the SDK
     let attestationApi = AttestationApi()
 
     let options: [String: Any] = [
@@ -133,21 +130,12 @@ func registration(
         print("⚠️ Origin (\(origin)) and rpId (\(rpId)) are different.")
     }
 
-    // Decode and sign the challenge using the provided signer
-    let challengeBytes =
-        Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!)) // Pass the base64URL string as bytes
+    // Decode the challenge
+    let challengeBytes = Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!))
 
-    /*********************************************************************************
-      IMPLEMENT "YourSigner method with signLiquidAuthChallenge and bring it in here!
-
-        func signChallenge(_ challenge: Data) async throws -> Data {
-            // Implementation example
-        }
-
-      It needs to be able to accept the challenge as a Data object and return the signature.
-    **********************************************************************************/
-
-    let signature = try await YourSigner.signChallenge(challengeBytes)
+    // Sign the challenge with your Algorand Ed25519 private key
+    // This is where you integrate with your wallet's signing mechanism
+    let signature = /* your wallet signing logic here */
 
     // Create the Liquid extension JSON object
     let liquidExt = [
@@ -291,21 +279,12 @@ func authentication(
         print("⚠️ Origin (\(origin)) and rpId (\(rpId)) are different.")
     }
 
-    // Decode and sign the challenge using the provided signer
-    let challengeBytes =
-        Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!)) // Pass the base64URL string as bytes
+    // Decode the challenge
+    let challengeBytes = Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!))
 
-    /*********************************************************************************
-      IMPLEMENT "YourSigner method with signLiquidAuthChallenge and bring it in here!
-
-        func signChallenge(_ challenge: Data) async throws -> Data {
-            // Implementation example
-        }
-
-      It needs to be able to accept the challenge as a Data object and return the signature.
-    **********************************************************************************/
-
-    let signature = try await YourSigner.signChallenge(challengeBytes)
+    // Sign the challenge with your Algorand Ed25519 private key
+    // This is where you integrate with your wallet's signing mechanism
+    let signature = /* your wallet signing logic here */
 
     // Create the Liquid extension JSON object
     let liquidExt = [
@@ -432,37 +411,27 @@ func startSignaling(
         ),
     ]
 
-    /*********************************************************************************
-      IMPLEMENT "YourMessageHandler" and bring it in here!
-
-        /// Handle an incoming message and optionally return a response
-        /// - Parameter message: The incoming message (base64URL encoded)
-        /// - Returns: Optional response message (base64URL encoded) or nil if no response
-        func handleMessage(_ message: String) async -> String
-
-      It needs to be able to accept what comes down the WebRTC connection (e.g., transaction bytes)
-      and then handle it appropriately. E.g., signing the bytes.
-    **********************************************************************************/
-
-    let signature = try await YourSigner.signChallenge(challengeBytes)
-
     signalService.connectToPeer(
         requestId: requestId,
         type: "answer",
         origin: origin,
         iceServers: iceServers,
         onMessage: { message in
-            Logger.info("💬 Received message: \(message)")
+            print("💬 Received message: \(message)")
 
             Task {
-                if let response = await YourMessageHandler.handleMessage(message) {
+                // Handle incoming messages from the dApp (e.g., transaction requests)
+                // Integrate with your wallet's message handling and signing logic
+                let response = /* your message handling logic here */
+                
+                if let response = response {
                     signalService.sendMessage(response)
                 }
             }
         },
         onStateChange: { state in
             if state == "open" {
-                Logger.info("✅ Data channel is OPEN")
+                print("✅ Data channel is OPEN")
                 signalService.sendMessage("ping")
             }
         }
@@ -470,22 +439,29 @@ func startSignaling(
 }
 ```
 
-The example code above mentions "`YourSigner`" and "`YourMessageHandler`". They are methods you can use to insert your own wallet code, where you handle key and mnemonic managemet
+**Integration Points:**
 
-`P256keypair` also need to be considereded by you.
+The SDK provides the WebAuthn infrastructure, but you'll need to integrate with your wallet for:
 
+1. **Challenge Signing**: Sign the WebAuthn challenge with your Algorand Ed25519 private key
+2. **Message Handling**: Process incoming WebRTC messages (typically transaction requests) according to your wallet's workflow
+3. **Key Management**: Manage P256 key pairs and Algorand key pairs according to your security model
 
-```
+The exact implementation depends on your wallet's architecture, key storage, and user interaction patterns.
+
 
 [!IMPORTANT]
 The Liquid Auth SDK in its current implementation is only for "client"/"answerer" usage, against an "offerer". It does not have the capability to be the "offerer", generate request IDs for other devices to connect. Simply put, it is intended to be implemented as part of mobile wallets, registering/authenticating against a dApp.
 
+
+```
 ┌─────────────┐     WebRTC     ┌─────────────┐
 │   dApp      │◄──────────────►│   Wallet    │
 │ (Offerer)   │                │ (Answerer)  │
 └─────────────┘                └─────────────┘
       │                               │
       └─────── Liquid Auth Backend ───┘
+```
 
 
 ## Implementing as part of an Autofill Credential Extension (`FIDO:/`)
