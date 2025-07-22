@@ -59,75 +59,422 @@ For an example of 2., check out [webauthn.io](webauthn.io), [webauthn.me](webaut
 
 ## Implementing Liquid Auth (`liquid://`)
 
+
+The following is an example Liquid Auth Implementation. It has three functions:
+
+- `registration(...)`: Illustrates the flow of registering a passkey, for future authentication.
+- `authentication(...)`: Illustrates the flow of authenticating with an already registered passkey.
+
+In the process of going through the above two flows, the request ID - a UUID sent b 
+
+- `startSignaling(...)`: Is provided with an origin and requestId, setting up communication.
+
+The app
+
 ```swift
-import LiquidAuthSDK
+import AuthenticationServices
+import CryptoKit
+import Foundation
+import SwiftCBOR
+import WebRTC
+
+#if canImport(UIKit)
+import UIKit
+#endif
 
 // ...
 
-func register (origin: String, requestId: String) async {
-  let client = LiquidAuthClient()
+/// Register implementation - contains all the complex WebAuthn logic
+///
+/// - Parameters:
+///   - origin: The origin domain for the WebAuthn ceremony
+///   - requestId: Unique identifier for this registration request
+///   - algorandAddress: The Algorand address to associate with this credential
+///   - p256KeyPair: The P256 key pair to use for the credential
+///   - userAgent: User agent string to send to the server (provided by the calling app)
+///   - device: Device identifier string to send to the server (provided by the calling app)
+/// - Returns: Result indicating success or failure
 
-  let result = try await client.register(
-    origin: origin,
-    requestId: requestId,
-    algorandAddress: address,
-    challengeSigner: challengeSigner,
-    p256KeyPair: p256KeyPair,
-    messageHandler: messageHandler,
-    userAgent: userAgent,
-    device: device
-  )
+func registration(
+    origin: String, // Y
+    requestId: String,
+    algorandAddress: String,
+    p256KeyPair: P256.Signing.PrivateKey,
+    userAgent: String,
+    device: String
+) async throws -> LiquidAuthResult {
+    // All this complex logic will be in the SDK
+    let attestationApi = AttestationApi()
+
+    let options: [String: Any] = [
+        "username": algorandAddress,
+        "displayName": "Liquid Auth User",
+        "authenticatorSelection": ["userVerification": "required"],
+        "extensions": ["liquid": true],
+    ]
+
+    // Post attestation options
+    let (data, sessionCookie) = try await attestationApi.postAttestationOptions(
+        origin: origin,
+        userAgent: userAgent,
+        options: options
+    )
+
+    guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+          let challengeBase64Url = json["challenge"] as? String,
+          let rp = json["rp"] as? [String: Any],
+          let rpId = rp["id"] as? String
+    else {
+        throw NSError(domain: "com.liquidauth.error", code: -1,
+                      userInfo: [NSLocalizedDescriptionKey: "Failed to parse response JSON"])
+    }
+
+    if origin != rpId {
+        print("⚠️ Origin (\(origin)) and rpId (\(rpId)) are different.")
+    }
+
+    // Decode and sign the challenge using the provided signer
+    let challengeBytes =
+        Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!)) // Pass the base64URL string as bytes
+
+    /*********************************************************************************
+      IMPLEMENT "YourSigner method with signLiquidAuthChallenge and bring it in here!
+
+        func signChallenge(_ challenge: Data) async throws -> Data {
+            // Implementation example
+        }
+
+      It needs to be able to accept the challenge as a Data object and return the signature.
+    **********************************************************************************/
+
+    let signature = try await YourSigner.signChallenge(challengeBytes)
+
+    // Create the Liquid extension JSON object
+    let liquidExt = [
+        "type": "algorand",
+        "requestId": requestId,
+        "address": algorandAddress,
+        "signature": signature.base64URLEncodedString(),
+        "device": device,
+    ]
+
+    // Deterministic ID - derived from P256 Public Key
+    let rawId = Data([UInt8](Utility.hashSHA256(p256KeyPair.publicKey.rawRepresentation)))
+
+    // Create clientDataJSON
+    let clientData: [String: Any] = [
+        "type": "webauthn.create",
+        "challenge": challengeBase64Url,
+        "origin": "https://\(rpId)",
+    ]
+
+    guard let clientDataJSONData = try? JSONSerialization.data(withJSONObject: clientData, options: []) else {
+        throw NSError(domain: "com.liquidauth.error", code: -1,
+                      userInfo: [NSLocalizedDescriptionKey: "Failed to create clientDataJSON"])
+    }
+
+    let clientDataJSONBase64Url = clientDataJSONData.base64URLEncodedString()
+
+    // Create attestationObject
+    let attestedCredData = Utility.getAttestedCredentialData(
+        aaguid: UUID(uuidString: "1F59713A-C021-4E63-9158-2CC5FDC14E52")!,
+        credentialId: rawId,
+        publicKey: p256KeyPair.publicKey.rawRepresentation
+    )
+
+    let rpIdHash = Utility.hashSHA256(rpId.data(using: .utf8)!)
+    let authData = AuthenticatorData.attestation(
+        rpIdHash: rpIdHash,
+        userPresent: true,
+        userVerified: true,
+        backupEligible: true,
+        backupState: true,
+        signCount: 0,
+        attestedCredentialData: attestedCredData,
+        extensions: nil
+    )
+
+    let attObj: [String: Any] = [
+        "attStmt": [:],
+        "authData": authData.toData(),
+        "fmt": "none",
+    ]
+
+    let cborEncoded = try CBOR.encodeMap(attObj)
+    let attestationObject = Data(cborEncoded)
+
+    let credential: [String: Any] = [
+        "id": rawId.base64URLEncodedString(),
+        "type": "public-key",
+        "rawId": rawId.base64URLEncodedString(),
+        "response": [
+            "clientDataJSON": clientDataJSONBase64Url,
+            "attestationObject": attestationObject.base64URLEncodedString(),
+        ],
+    ]
+
+    // Post attestation result
+    let responseData = try await attestationApi.postAttestationResult(
+        origin: origin,
+        userAgent: userAgent,
+        credential: credential,
+        liquidExt: liquidExt,
+        device: device
+    )
+
+    // Handle the server response
+    let responseString = String(data: responseData, encoding: .utf8) ?? "Invalid response"
+
+    // Parse the response to check for errors
+    if let responseJSON = try? JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any],
+        let errorReason = responseJSON["error"] as? String
+    {
+        print("Registration failed: \(errorReason)")
+        return LiquidAuthResult(success: false, errorMessage: "Registration failed: \(errorReason)")
+    } else {
+        print("Registration completed successfully.")
+        return LiquidAuthResult(success: true)
+    }
 }
 
-// ...
+/// Authentication Flow
+///
+/// - Parameters:
+///   - origin: The origin domain for the WebAuthn ceremony
+///   - requestId: Unique identifier for this authentication request
+///   - algorandAddress: The Algorand address associated with the credential
+///   - challengeSigner: Handler for signing the WebAuthn Ed25519 Liquid Extension challenge
+///   - p256KeyPair: The P256 key pair associated with the credential
+///   - userAgent: User agent string to send to the server (provided by the calling app)
+///   - device: Device identifier string to send to the server (provided by the calling app)
+/// - Returns: Result indicating success or failure
+func authentication(
+    origin: String,
+    requestId: String,
+    algorandAddress: String,
+    p256KeyPair: P256.Signing.PrivateKey,
+    userAgent: String,
+    device: String
+) async throws -> LiquidAuthResult {
+    let assertionApi = AssertionApi()
 
-func authenticate (origin: String, requestId: String) async {
-  let client = LiquidAuthClient()
+    let credentialId = Data([UInt8](Utility.hashSHA256(p256KeyPair.publicKey.rawRepresentation)))
+        .base64URLEncodedString()
 
-  let result = try await client.authenticate(
-    origin: origin,
-    requestId: requestId,
-    algorandAddress: address,
-    challengeSigner: challengeSigner,
-    p256KeyPair: p256KeyPair,
-    messageHandler: messageHandler,
-    userAgent: userAgent,
-    device: device
-  )
+    // Call postAssertionOptions
+    let (data, sessionCookie) = try await assertionApi.postAssertionOptions(
+        origin: origin,
+        userAgent: userAgent,
+        credentialId: credentialId
+    )
+
+    // Parse the response data
+    guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+          let challengeBase64Url = json["challenge"] as? String
+    else {
+        throw NSError(domain: "com.liquidauth.error", code: -1,
+                      userInfo: [NSLocalizedDescriptionKey: "Failed to parse response JSON"])
+    }
+
+    // Support both "rp": { "id": ... } and "rpId": ...
+    let rpId: String
+    if let rp = json["rp"] as? [String: Any], let id = rp["id"] as? String {
+        rpId = id
+    } else if let id = json["rpId"] as? String {
+        rpId = id
+    } else {
+        throw NSError(domain: "com.liquidauth.error", code: -1,
+                      userInfo: [NSLocalizedDescriptionKey: "Failed to find rpId in response."])
+    }
+
+    if origin != rpId {
+        print("⚠️ Origin (\(origin)) and rpId (\(rpId)) are different.")
+    }
+
+    // Decode and sign the challenge using the provided signer
+    let challengeBytes =
+        Data([UInt8](Utility.decodeBase64Url(challengeBase64Url)!)) // Pass the base64URL string as bytes
+
+    /*********************************************************************************
+      IMPLEMENT "YourSigner method with signLiquidAuthChallenge and bring it in here!
+
+        func signChallenge(_ challenge: Data) async throws -> Data {
+            // Implementation example
+        }
+
+      It needs to be able to accept the challenge as a Data object and return the signature.
+    **********************************************************************************/
+
+    let signature = try await YourSigner.signChallenge(challengeBytes)
+
+    // Create the Liquid extension JSON object
+    let liquidExt = [
+        "type": "algorand",
+        "requestId": requestId,
+        "address": algorandAddress,
+        "signature": signature.base64URLEncodedString(),
+        "device": device,
+    ]
+
+    // Create clientDataJSON
+    let clientData: [String: Any] = [
+        "type": "webauthn.get",
+        "challenge": challengeBase64Url,
+        "origin": "https://\(rpId)",
+    ]
+
+    guard let clientDataJSONData = try? JSONSerialization.data(withJSONObject: clientData, options: []) else {
+        throw NSError(domain: "com.liquidauth.error", code: -1,
+                      userInfo: [NSLocalizedDescriptionKey: "Failed to create clientDataJSON"])
+    }
+
+    let clientDataJSONBase64Url = clientDataJSONData.base64URLEncodedString()
+
+    let rpIdHash = Utility.hashSHA256(rpId.data(using: .utf8)!)
+    let authenticatorData = AuthenticatorData.assertion(
+        rpIdHash: rpIdHash,
+        userPresent: true,
+        userVerified: true,
+        backupEligible: false,
+        backupState: false
+    ).toData()
+
+    let clientDataHash = Utility.hashSHA256(clientDataJSONData)
+    let dataToSign = authenticatorData + clientDataHash
+
+    let p256Signature = try p256KeyPair.signature(for: dataToSign)
+
+    let assertionResponse: [String: Any] = [
+        "id": credentialId,
+        "type": "public-key",
+        "userHandle": "tester",
+        "rawId": credentialId,
+        "response": [
+            "clientDataJSON": clientDataJSONData.base64URLEncodedString(),
+            "authenticatorData": authenticatorData.base64URLEncodedString(),
+            "signature": p256Signature.derRepresentation.base64URLEncodedString(),
+        ],
+    ]
+
+    // Serialize the assertion response into a JSON string
+    guard let assertionResponseData = try? JSONSerialization.data(withJSONObject: assertionResponse, options: []),
+          let assertionResponseJSON = String(data: assertionResponseData, encoding: .utf8)
+    else {
+        throw NSError(domain: "com.liquidauth.error", code: -1,
+                      userInfo: [NSLocalizedDescriptionKey: "Failed to serialize assertion response"])
+    }
+
+    // Post the assertion result
+    let responseData = try await assertionApi.postAssertionResult(
+        origin: origin,
+        userAgent: userAgent,
+        credential: assertionResponseJSON,
+        liquidExt: liquidExt
+    )
+
+    // Handle the server response
+    let responseString = String(data: responseData, encoding: .utf8) ?? "Invalid response"
+
+    // Parse the response to check for errors
+    if let responseJSON = try? JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any],
+        let errorReason = responseJSON["error"] as? String
+    {
+        print("Authentication failed: \(errorReason)")
+        return LiquidAuthResult(success: false, errorMessage: "Authentication failed: \(errorReason)")
+    } else {
+        print("Authentication completed successfully.")
+        return LiquidAuthResult(success: true)
+    }
 }
 
+/// Start signaling for peer-to-peer communication
+///
+/// Can be called after either register or authenticate have been used
+/// to prove ownership of a Request Id.
+///
+/// - Parameters:
+///   - origin: The origin domain for the signaling service
+///   - requestId: Unique identifier for this signaling session
+///   - messageHandler: Handler for incoming messages during the session
+/// - Throws: LiquidAuthError if signaling setup fails
+func startSignaling(
+    origin: String,
+    requestId: String,
+) async throws {
+    let signalService = SignalService.shared
+
+    signalService.start(url: origin, httpClient: URLSession.shared)
+
+    let NODELY_TURN_USERNAME = "liquid-auth"
+    let NODELY_TURN_CREDENTIAL = "sqmcP4MiTKMT4TGEDSk9jgHY"
+
+    let iceServers = [
+        RTCIceServer(
+            urlStrings: [
+                "stun:stun.l.google.com:19302",
+                "stun:stun1.l.google.com:19302",
+                "stun:stun2.l.google.com:19302",
+                "stun:stun3.l.google.com:19302",
+                "stun:stun4.l.google.com:19302",
+            ]
+        ),
+        RTCIceServer(
+            urlStrings: [
+                "turn:global.turn.nodely.network:80?transport=tcp",
+                "turns:global.turn.nodely.network:443?transport=tcp",
+                "turn:eu.turn.nodely.io:80?transport=tcp",
+                "turns:eu.turn.nodely.io:443?transport=tcp",
+                "turn:us.turn.nodely.io:80?transport=tcp",
+                "turns:us.turn.nodely.io:443?transport=tcp",
+            ],
+            username: NODELY_TURN_USERNAME,
+            credential: NODELY_TURN_CREDENTIAL
+        ),
+    ]
+
+    /*********************************************************************************
+      IMPLEMENT "YourMessageHandler" and bring it in here!
+
+        /// Handle an incoming message and optionally return a response
+        /// - Parameter message: The incoming message (base64URL encoded)
+        /// - Returns: Optional response message (base64URL encoded) or nil if no response
+        func handleMessage(_ message: String) async -> String
+
+      It needs to be able to accept what comes down the WebRTC connection (e.g., transaction bytes)
+      and then handle it appropriately. E.g., signing the bytes.
+    **********************************************************************************/
+
+    let signature = try await YourSigner.signChallenge(challengeBytes)
+
+    signalService.connectToPeer(
+        requestId: requestId,
+        type: "answer",
+        origin: origin,
+        iceServers: iceServers,
+        onMessage: { message in
+            Logger.info("💬 Received message: \(message)")
+
+            Task {
+                if let response = await YourMessageHandler.handleMessage(message) {
+                    signalService.sendMessage(response)
+                }
+            }
+        },
+        onStateChange: { state in
+            if state == "open" {
+                Logger.info("✅ Data channel is OPEN")
+                signalService.sendMessage("ping")
+            }
+        }
+    )
+}
 ```
 
-The client exposes the `register` and `authenticate` methods. Use them to register and authenticate with a passkey respectively. 
+The example code above mentions "`YourSigner`" and "`YourMessageHandler`". They are methods you can use to insert your own wallet code, where you handle key and mnemonic managemet
 
-- `origin`: typically refers to the domain of the Web3 frontend. Note that it doesn't necessarily have to coincide with the domain of the underlying Liquid Auth backend, e.g. if you are relying on a node provider to run the backend for you. Typically parsed from a `liquid://` URI QR code.
+`P256keypair` also need to be considereded by you.
 
-- `requestId`: a UUID corresponding to the current connection request. The point of the WebAuthn flow is to authenticate that specific UUID, so we can then setup the WebRTC connection over it. Typically parsed from a `liquid://` URI QR code.
 
-- `algorandAddress`: base32-encoded Algorand address (58 characters)
-
-- `challengeSigner`: a method you need to implement and pass along into the SDK in accordance with `protocol LiquidAuthChallengeSigner`. It must be able to accept a 32 byte challenge nonce and return the signature bytes of it signed by the above-mentioned Algorand address/public key. The challenge refers to the Liquid extension that has been added on top of the standard WebAuthn flow.
-
-- `p256KeyPair`: the passkey (P256 elliptic-curve private/public keypair) that is to be registered or authenticated with. Feel free to either generate a random keypair with the standard iOS Crypto library, or deterministically do so (with a 24 word mnemonic) using the [dP256 library](deterministic-P256-swift/Tests/deterministicP…).
-
-- `messageHandler`: the second method you need to implement in accordance with `protocol LiquidAuthMessageHandler`. This method will accept messages from the counter-party (e.g., transaction bytes to sign), allow you to handle them (e.g., signing those bytes) before sending them back in a response.
-
-- `userAgent`: Your app's user agent string (e.g., "liquid-auth/1.0 (iPhone; iOS 18.5)"). Needs to conform with [ua-parser-js](https://www.npmjs.com/package/ua-parser-js).
-
-- `device`: Device identifier (e.g., "iPhone", "iPad")
-
-```swift
-class MyChallengeSigner: LiquidAuthChallengeSigner {
-    func signChallenge(_ challenge: Data) async throws -> Data {
-        // Implementation example
-    }
-}
-
-class MyMessageHandler: LiquidAuthMessageHandler {
-    func handleMessage(_ message: String) async -> String? {
-        // Implementation example  
-    }
-}
 ```
 
 [!IMPORTANT]
