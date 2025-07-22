@@ -17,9 +17,9 @@
 import Foundation
 
 public class AssertionApi {
-    private let session: URLSessionProtocol
+    public let session: URLSessionProtocol
 
-    init(session: URLSessionProtocol = URLSession.shared) {
+    public init(session: URLSessionProtocol = URLSession.shared) {
         self.session = session
     }
 

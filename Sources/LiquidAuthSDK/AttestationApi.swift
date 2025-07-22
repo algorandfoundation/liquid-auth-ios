@@ -23,9 +23,9 @@ import UIKit
 // MARK: - AttestationApi
 
 public class AttestationApi {
-    private let session: URLSessionProtocol
+    public let session: URLSessionProtocol
 
-    init(session: URLSessionProtocol = URLSession.shared) {
+    public init(session: URLSessionProtocol = URLSession.shared) {
         self.session = session
     }
 

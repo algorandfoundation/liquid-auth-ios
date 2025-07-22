@@ -97,7 +97,7 @@ public class SignalService {
     ///   - iceServers: ICE servers for NAT traversal
     ///   - onMessage: Callback for received messages
     ///   - onStateChange: Callback for connection state changes
-    func connectToPeer(
+    public func connectToPeer(
         requestId: String,
         type: String,
         origin: String,

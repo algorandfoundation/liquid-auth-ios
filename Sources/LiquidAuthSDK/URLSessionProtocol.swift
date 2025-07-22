@@ -19,7 +19,7 @@ import Foundation
 // MARK: - URLSessionProtocol
 
 // Protocol to abstract URLSession for testing
-protocol URLSessionProtocol {
+public protocol URLSessionProtocol {
     func data(for request: URLRequest) async throws -> (Data, URLResponse)
 }
 
