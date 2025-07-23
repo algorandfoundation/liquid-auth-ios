@@ -20,7 +20,7 @@ import WebRTC
 
 // MARK: - SignalClient
 
-class SignalClient {
+public class SignalClient {
     private let manager: SocketManager
     private let socket: SocketIOClient
     weak var service: SignalService?
@@ -43,7 +43,7 @@ class SignalClient {
     }
 
     // swiftlint:disable:next function_body_length
-    func connectToPeer(
+    public func connectToPeer(
         requestId: String,
         type: String,
         iceServers: [RTCIceServer],

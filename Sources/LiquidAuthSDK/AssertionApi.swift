@@ -16,10 +16,10 @@
 
 import Foundation
 
-class AssertionApi {
-    private let session: URLSession
+public class AssertionApi {
+    public let session: URLSessionProtocol
 
-    init(session: URLSession = .shared) {
+    public init(session: URLSessionProtocol = URLSession.shared) {
         self.session = session
     }
 
@@ -33,12 +33,16 @@ class AssertionApi {
      *   - liquidExt: Optional Liquid extension flag
      * - Returns: A tuple containing the response data and an optional session cookie
      */
-    func postAssertionOptions(
+    public func postAssertionOptions(
         origin: String,
         userAgent: String,
         credentialId: String,
         liquidExt: Bool? = true
     ) async throws -> (Data, HTTPCookie?) {
+        guard !origin.isEmpty else {
+            throw LiquidAuthError.invalidURL("Origin cannot be empty")
+        }
+
         let path = "https://\(origin)/assertion/request/\(credentialId)"
         Logger.debug("AssertionApi: POST \(path)")
         Logger.debug("AssertionApi: credentialId: \(credentialId)")
@@ -111,12 +115,16 @@ class AssertionApi {
      *   - liquidExt: Optional Liquid extension data
      * - Returns: The response data
      */
-    func postAssertionResult(
+    public func postAssertionResult(
         origin: String,
         userAgent: String,
         credential: String,
         liquidExt: [String: Any]? = nil
     ) async throws -> Data {
+        guard !origin.isEmpty else {
+            throw LiquidAuthError.invalidURL("Origin cannot be empty")
+        }
+
         let path = "https://\(origin)/assertion/response"
         Logger.debug("AssertionApi: POST \(path)")
         Logger.debug("AssertionApi: credential: \(credential)")

@@ -25,8 +25,8 @@ protocol SignalServiceDelegate: AnyObject {
 
 // MARK: - SignalService
 
-class SignalService {
-    static let shared = SignalService()
+public class SignalService {
+    public static let shared = SignalService()
 
     weak var delegate: SignalServiceDelegate?
     private var signalClient: SignalClient?
@@ -51,7 +51,7 @@ class SignalService {
     /// - Parameters:
     ///   - url: The signaling server URL
     ///   - httpClient: URLSession for HTTP communications
-    func start(url: String, httpClient _: URLSession) {
+    public func start(url: String, httpClient _: URLSession) {
         // Initialize the SignalClient
         signalClient = SignalClient(url: url, service: self)
         signalClient?.connectSocket()
@@ -97,7 +97,7 @@ class SignalService {
     ///   - iceServers: ICE servers for NAT traversal
     ///   - onMessage: Callback for received messages
     ///   - onStateChange: Callback for connection state changes
-    func connectToPeer(
+    public func connectToPeer(
         requestId: String,
         type: String,
         origin: String,
@@ -166,7 +166,7 @@ class SignalService {
     /// Sends a message through the data channel
     ///
     /// - Parameter message: The message to send
-    func sendMessage(_ message: String) {
+    public func sendMessage(_ message: String) {
         if let dataChannel, dataChannel.readyState == .open {
             Logger
                 .debug(

@@ -22,10 +22,10 @@ import UIKit
 
 // MARK: - AttestationApi
 
-class AttestationApi {
-    private let session: URLSession
+public class AttestationApi {
+    public let session: URLSessionProtocol
 
-    init(session: URLSession = .shared) {
+    public init(session: URLSessionProtocol = URLSession.shared) {
         self.session = session
     }
 
@@ -38,11 +38,15 @@ class AttestationApi {
      *   - options: PublicKeyCredentialCreationOptions in JSON
      * - Returns: A tuple containing the response data and an optional session cookie
      */
-    func postAttestationOptions(
+    public func postAttestationOptions(
         origin: String,
         userAgent: String,
         options: [String: Any]
     ) async throws -> (Data, HTTPCookie?) {
+        guard !origin.isEmpty else {
+            throw LiquidAuthError.invalidURL("Origin cannot be empty")
+        }
+
         // Construct the URL
         let path = "https://\(origin)/attestation/request"
         Logger.debug("AttestationApi: POST \(path)")
@@ -110,13 +114,17 @@ class AttestationApi {
      *   - device: Device identifier string
      * - Returns: The response data
      */
-    func postAttestationResult(
+    public func postAttestationResult(
         origin: String,
         userAgent: String,
         credential: [String: Any],
         liquidExt: [String: Any]? = nil,
         device: String
     ) async throws -> Data {
+        guard !origin.isEmpty else {
+            throw LiquidAuthError.invalidURL("Origin cannot be empty")
+        }
+
         // Construct the URL
         let path = "https://\(origin)/attestation/response"
         Logger.debug("AttestationApi: POST \(path)")
