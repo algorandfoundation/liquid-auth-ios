@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "LiquidAuthSDK",
     platforms: [
-        .iOS(.v17),
+        .iOS(.v16),
         .macOS(.v12)
     ],
     products: [
@@ -16,7 +16,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/valpackett/SwiftCBOR.git",
-            branch: "master"
+            revision: "ea5ece79b0efde241495bfaa74eccceeffc382bc"
         ),
         .package(
             url: "https://github.com/socketio/socket.io-client-swift.git",
