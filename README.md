@@ -23,7 +23,7 @@ Please refer to the [example app](https://github.com/algorandfoundation/liquid-a
 
 ### Requirements:
 
-- ***iOS 17+***
+- ***iOS 17+*** for use in Autofill Extension Credential.
 
 Note that running WebRTC on a simulated iOS device is not possible. You must use an actual device to test it out.
 
